@@ -1,0 +1,102 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32328.378
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BF166DF5-35F9-4DCD-88B8-03FF2141F8BB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{F1EF884B-1307-4C0C-B9F9-D847499E1275}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rowbot", "src\Rowbot\Rowbot.csproj", "{58E06FA4-6EFA-4939-BE5C-867D00901998}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rowbot.Connectors.Csv", "src\Rowbot.Connectors.Csv\Rowbot.Connectors.Csv.csproj", "{29C3AC2A-ADED-4BF7-8C48-5C82591A8EB6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rowbot.Connectors.SqlServer", "src\Rowbot.Connectors.SqlServer\Rowbot.Connectors.SqlServer.csproj", "{0B3965B1-5D31-454C-AAEB-9AFD941ED5A8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rowbot.IntegrationTests", "test\Rowbot.IntegrationTests\Rowbot.IntegrationTests.csproj", "{6BABCE2C-721A-4B1E-B290-0AF736A941C8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rowbot.UnitTests", "test\Rowbot.UnitTests\Rowbot.UnitTests.csproj", "{D2DAB1EE-22BE-4565-875B-2EE925A7AF7D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rowbot.Connectors.Sqlite", "src\Rowbot.Connectors.Sqlite\Rowbot.Connectors.Sqlite.csproj", "{BE240B35-7635-4940-8E6B-17C056C31D3A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{F2BC404E-A276-4AE4-95D2-09D4E11B835C}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contributor", "Contributor", "{6E465FCE-C902-46D2-AC46-2100C91EBF5D}"
+	ProjectSection(SolutionItems) = preProject
+		docs\Contributor\Blocks.md = docs\Contributor\Blocks.md
+		docs\Contributor\Connectors.md = docs\Contributor\Connectors.md
+		docs\Contributor\Entities.md = docs\Contributor\Entities.md
+		docs\Contributor\Extractors.md = docs\Contributor\Extractors.md
+		docs\Contributor\Fields.md = docs\Contributor\Fields.md
+		docs\Contributor\Get Started.md = docs\Contributor\Get Started.md
+		docs\Contributor\Loaders.md = docs\Contributor\Loaders.md
+		docs\Contributor\Mapper.md = docs\Contributor\Mapper.md
+		docs\Contributor\Pipeline Builder.md = docs\Contributor\Pipeline Builder.md
+		docs\Contributor\Pipeline Runner.md = docs\Contributor\Pipeline Runner.md
+		docs\Contributor\Pipeline.md = docs\Contributor\Pipeline.md
+		docs\Contributor\Transformers.md = docs\Contributor\Transformers.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "User", "User", "{F889DD6C-B927-407B-A220-F695CF538127}"
+	ProjectSection(SolutionItems) = preProject
+		docs\User\Class Structure.md = docs\User\Class Structure.md
+		docs\User\Extractors.md = docs\User\Extractors.md
+		docs\User\Get Started.md = docs\User\Get Started.md
+		docs\User\Integration Testing.md = docs\User\Integration Testing.md
+		docs\User\Loaders.md = docs\User\Loaders.md
+		docs\User\Pipeline Structure.md = docs\User\Pipeline Structure.md
+		docs\User\Project Structure.md = docs\User\Project Structure.md
+		docs\User\Unit Testing.md = docs\User\Unit Testing.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{58E06FA4-6EFA-4939-BE5C-867D00901998}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58E06FA4-6EFA-4939-BE5C-867D00901998}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58E06FA4-6EFA-4939-BE5C-867D00901998}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58E06FA4-6EFA-4939-BE5C-867D00901998}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29C3AC2A-ADED-4BF7-8C48-5C82591A8EB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29C3AC2A-ADED-4BF7-8C48-5C82591A8EB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29C3AC2A-ADED-4BF7-8C48-5C82591A8EB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29C3AC2A-ADED-4BF7-8C48-5C82591A8EB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B3965B1-5D31-454C-AAEB-9AFD941ED5A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B3965B1-5D31-454C-AAEB-9AFD941ED5A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B3965B1-5D31-454C-AAEB-9AFD941ED5A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B3965B1-5D31-454C-AAEB-9AFD941ED5A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BABCE2C-721A-4B1E-B290-0AF736A941C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BABCE2C-721A-4B1E-B290-0AF736A941C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BABCE2C-721A-4B1E-B290-0AF736A941C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BABCE2C-721A-4B1E-B290-0AF736A941C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2DAB1EE-22BE-4565-875B-2EE925A7AF7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2DAB1EE-22BE-4565-875B-2EE925A7AF7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2DAB1EE-22BE-4565-875B-2EE925A7AF7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2DAB1EE-22BE-4565-875B-2EE925A7AF7D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE240B35-7635-4940-8E6B-17C056C31D3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE240B35-7635-4940-8E6B-17C056C31D3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE240B35-7635-4940-8E6B-17C056C31D3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE240B35-7635-4940-8E6B-17C056C31D3A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{58E06FA4-6EFA-4939-BE5C-867D00901998} = {BF166DF5-35F9-4DCD-88B8-03FF2141F8BB}
+		{29C3AC2A-ADED-4BF7-8C48-5C82591A8EB6} = {BF166DF5-35F9-4DCD-88B8-03FF2141F8BB}
+		{0B3965B1-5D31-454C-AAEB-9AFD941ED5A8} = {BF166DF5-35F9-4DCD-88B8-03FF2141F8BB}
+		{6BABCE2C-721A-4B1E-B290-0AF736A941C8} = {F1EF884B-1307-4C0C-B9F9-D847499E1275}
+		{D2DAB1EE-22BE-4565-875B-2EE925A7AF7D} = {F1EF884B-1307-4C0C-B9F9-D847499E1275}
+		{BE240B35-7635-4940-8E6B-17C056C31D3A} = {BF166DF5-35F9-4DCD-88B8-03FF2141F8BB}
+		{6E465FCE-C902-46D2-AC46-2100C91EBF5D} = {F2BC404E-A276-4AE4-95D2-09D4E11B835C}
+		{F889DD6C-B927-407B-A220-F695CF538127} = {F2BC404E-A276-4AE4-95D2-09D4E11B835C}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F8A30A23-3B07-4F54-BD8C-40900ADF6E5F}
+	EndGlobalSection
+EndGlobal
