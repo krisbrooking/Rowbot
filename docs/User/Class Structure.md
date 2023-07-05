@@ -1,7 +1,7 @@
 # Class Structure
 
 ## Pipeline Container
-A pipeline is declared inside a pipeline container, a class that implements `IPipelineContainer`. Any method within the class that returns an object of type `Pipeline` will be registered for exeuction by the pipeline runner. A pipeline container can contain any number of such methods.
+A pipeline is declared inside a pipeline container, a class that implements `IPipelineContainer`. Any method within the class that returns an object of type `Pipeline` will be registered for execution by the pipeline runner. A pipeline container can contain any number of such methods.
 
 ```csharp
 public sealed class CustomerPipelines : IPipelineContainer

@@ -17,6 +17,6 @@ The user documentation provides how-to guides and code examples to get started b
 [User -> Get Started](docs/User/Get%20Started.md)
 
 ### Contributor Documentation
-The contributor documentation provides explanations of the major abstractions that power Rowbot. It attempts to contextualise design decisions and describe the pros and cons of the approach taken. Contributor documentation is intentionally not reference documentatation. It is designed to be simple and concise so that a contributor can quickly build an understanding of Rowbot's internals.
+The contributor documentation provides explanations of the major abstractions that power Rowbot. It attempts to contextualise design decisions and describe the pros and cons of the approach taken. Contributor documentation is intentionally not reference documentation. It is designed to be simple and concise so that a contributor can quickly build an understanding of Rowbot's internals.
 
 [Contributor -> Get Started](docs/Contributor/Get%20Started.md)

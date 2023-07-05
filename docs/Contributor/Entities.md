@@ -3,8 +3,8 @@
 ## Design
 `EntityDescriptor` describes an entity and provides metadata to other components.
 
-An `EntityDescriptor` is essentially an instantiator of field descriptors. It exists separately for consistency and performance.
-- **Consisitency**: `EntityDescriptor` describes an entity while `FieldDescriptor` describes a field.
+An `EntityDescriptor` is essentially a creator of field descriptors. It exists separately for consistency and performance.
+- **Consistency**: `EntityDescriptor` describes an entity while `FieldDescriptor` describes a field.
 - **Performance**: Some fields require scanning the entire entity object to find additional object members. An example is foreign key fields. This reflection could be done every time a `FieldDescriptor` is instantiated but it is much faster to find all object members once, cache them, and use the cache when instantiating each individual `FieldDescriptor`.
 
 # EntityAccessor
@@ -14,7 +14,7 @@ An `EntityDescriptor` is essentially an instantiator of field descriptors. It ex
 
 On instantiation, `EntityAccessor` builds mappers and accessors for every entity object member. All are cached and reused.
 
-Because entities and fields are generic, mappers and accessors must be generated at runtime. Values of a field could be accessed via reflection but this isn't a viable solution if we are concerned about performance. The accessor could potentially be invoked thousands or millions of times for every run of the data pipline.
+Because entities and fields are generic, mappers and accessors must be generated at runtime. Values of a field could be accessed via reflection but this isn't a viable solution if we are concerned about performance. The accessor could potentially be invoked thousands or millions of times for every run of the data pipeline.
 
 A better approach is to dynamically generate the accessor using expression trees. After the expression tree is compiled and cached, the time taken to invoke the accessor is only slightly slower than if it had been hard coded. Importantly, this approach is much faster than accessing the value via reflection.
 

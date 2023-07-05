@@ -47,7 +47,7 @@ Every entity field is declared as a property of the entity class and each proper
 | Field | NotMapped | The field is not included when extracting or loading data |
 | Field | Required | The field is required |
 | Field | MaxLength | For a string or array type, changes the max size from default 300|
-| Field | Precision | For a decimal type, specifices the precision and scale |
+| Field | Precision | For a decimal type, specifies the precision and scale |
 
 A field value is defined as nullable by making the property type nullable. There is no nullable field attribute.
 

@@ -55,7 +55,7 @@ An extractor provides additional context to a read connector using extract param
 
 If an extractor generates, or is provided with, a collection of one or more `ExtractParameterCollection` objects, it will iterate over them and provide each in a separate invocation of the read connector's query method.
 
-> All extractors accept user-generated extract parameters but they are not gauranteed to forward them. It is the responsibility of the extractor developer to decide whether to provide support for user-generated extract parameters, and if so, how to utilise them.
+> All extractors accept user-generated extract parameters but they are not guaranteed to forward them. It is the responsibility of the extractor developer to decide whether to provide support for user-generated extract parameters, and if so, how to utilise them.
 
 ### Inject Extract Parameters
 Users can generate extract parameters and inject them into an extractor to be forwarded on to the read connector.
@@ -72,12 +72,12 @@ public Pipeline Load() =>
         .WithSlowlyChangingDimension();
 ```
 
-#### Deffered Execution
+#### Deferred Execution
 In the following example, a method named `GetAccessTokensAsync()` generates access tokens which are subsequently provided to the HTTP read connector.
 
 Let's imagine in this example that different groups of customers are isolated by security boundary and require separate access tokens. `GetAccessTokensAsync()` generates an `ExtractParameterCollection` for every group of customers and returns an `IEnumerable<ExtractParameterCollection>`.
 
-`AddExtractParameters()` accepts this as a func delegate of type `Func<Task<IEnumerable<ExtractParameterCollection>>>` so that execution is deffered until the pipeline is executed by pipeline runner. 
+`AddExtractParameters()` accepts this as a func delegate of type `Func<Task<IEnumerable<ExtractParameterCollection>>>` so that execution is deferred until the pipeline is executed by pipeline runner. 
 
 During pipeline execution, `GetAccessTokensAsync()` is invoked and generates a list of access tokens. The extractor iterates over the collection and ensures that the HTTP read connector queries the endpoint for every group of customers, each time providing a different access token.
 

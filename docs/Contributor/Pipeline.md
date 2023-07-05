@@ -1,7 +1,7 @@
 # Pipeline
 
 ## Background
-`Pipeline` was created as the return type for pipeline builder. Its orginal purpose was nothing more than to store a list of blocks and pass them to the pipeline runner. `Pipeline` has since been given additional responsibilities in an effort to better separate concerns between it, pipeline builder, and pipeline runner.
+`Pipeline` was created as the return type for pipeline builder. Its original purpose was nothing more than to store a list of blocks and pass them to the pipeline runner. `Pipeline` has since been given additional responsibilities in an effort to better separate concerns between it, pipeline builder, and pipeline runner.
 
 - Pipeline builder is responsible for creating blocks and constructing a `Pipeline`.
 - `Pipeline` is responsible for linking the blocks together in series and executing the blocks when requested to do so by pipeline runner.
@@ -20,7 +20,7 @@ The extract, transform, and load block types implement `IBlockSource<T>` or `IBl
 Given that every block constructs a `Func<Task>`, pipelines are executed asynchronously. Blocks of type extract, transform, and load, are started simultaneously and awaited using `Task.WhenAll()`. All tasks need to be running concurrently to support batch processing using the producer/consumer pattern. A block's channel manages when a block's `Task` is complete and ready to be shutdown. Once all channels have completed, the aggregate `Task` completes.
 
 ### Pipeline Summary
-A `Pipeline` returns a `PipelineSummary` after execution with metrics related to block completion status including errors, runtime, and rows affected. This information is considered separate from logging in that it gives the developer a high level understanding of the last run, rather than information that can be used to trace a problem.
+A `Pipeline` returns a `PipelineSummary` after execution with metrics related to block completion status including errors, runtime, and rows affected. This information is considered separate from logging in that it gives the developer a high-level understanding of the last run, rather than information that can be used to trace a problem.
 
 Because blocks run concurrently, callbacks are used to collect data. Before the pipeline is executed, each block is configured with a callback function that writes a summary to a `ConcurrentBag<IBlockSummary>`. When a block completes, it invokes the callback function to send its summary back to the `Pipeline`.
 

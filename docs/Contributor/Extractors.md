@@ -22,7 +22,7 @@ Often data pipelines are built to merge data. This works well when all data is q
 - **Data pipeline 2**: Get data from REST endpoint B and load to SQL table B.
 - **Data pipeline 3**: Join SQL tables A and B and load to SQL table C.
 
-This pattern remains the recommended approach to data pipeline design when both REST endpoints return a lot of data. However, if endpoint B is only returning 20 items that are used for some type of mapping, then this approach is difficult to justify. A better solution is to retreive the 20 items from endpoint B outside the data pipeline and inject them as parameters into the extract stage. This results in a single data pipeline to achieve the same result. 
+This pattern remains the recommended approach to data pipeline design when both REST endpoints return a lot of data. However, if endpoint B is only returning 20 items that are used for some type of mapping, then this approach is difficult to justify. A better solution is to retrieve the 20 items from endpoint B outside the data pipeline and inject them as parameters into the extract stage. This results in a single data pipeline to achieve the same result. 
 - **Data pipeline 1**: Get data from REST endpoint A, inject data from REST endpoint B and load to SQL table A.
 
 ## Design
@@ -37,7 +37,7 @@ In contrast, reading data from a source system often does require additional con
 - To GET data from an OAuth secured HTTP endpoint, we need an access token.
 
 ### Generalising Data Extraction
-The context required for data extraction can get even more complicated. Given the example above with REST endpoints A and B, we might want to query endpoint A 20 times, one each for every result from endpoint B and it might be that every request to endpoint A requires a seperate access token.
+The context required for data extraction can get even more complicated. Given the example above with REST endpoints A and B, we might want to query endpoint A 20 times, one each for every result from endpoint B and it might be that every request to endpoint A requires a separate access token.
 
 Whether or not to create a custom connector for these sort of scenarios is a design decision for the data pipeline developer. Rowbot offers the following generalised abstraction as an alternative.
 
@@ -52,7 +52,7 @@ The extractor uses extract parameters to modify a query. An extract parameter is
 
 An extractor can generate and/or provide user-defined extract parameters. Pipeline builder includes an extension method for configuring common options. The `IncludeOptions()` method supports adding parameters using either `AddParameter` that accepts a single extract parameter, or `AddParameters` that accepts a factory that generates extract parameters. Factory methods are invoked by the extractor during pipeline execution.
 
-See more [User -> Extractors](..\User\Extractors.md)
+See more [User -> Extractors](../../docs/User/Extractors.md)
 
 Using extract parameters, the previous example might be implemented as follows.
 

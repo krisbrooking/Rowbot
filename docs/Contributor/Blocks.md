@@ -1,7 +1,7 @@
 # Blocks
 
 ## Background
-Rowbot was originally designed as a simple api built on top of TPL Dataflow, a set of .NET components for building data pipelines. The primary reason Dataflow was chosed was for the producer/consumer architecture which allows for batch processing of data. This removes the need to load an entire dataset into memory before transformation.
+Rowbot was originally designed as a simple api built on top of TPL Dataflow, a set of .NET components for building data pipelines. The primary reason Dataflow was chosen was for the producer/consumer architecture which allows for batch processing of data. This removes the need to load an entire dataset into memory before transformation.
 
 It was clear from the start that most of the power of TPL Dataflow was not utilised. 
 - Parallelisation is typically unnecessary for an ETL data pipeline which is primarily IO-bound.
@@ -12,8 +12,7 @@ Eventually Dataflow was replaced with .NET Channels, a simpler producer/consumer
 
 | :information_source: Technical Note |
 | --- |
-| <p>One thing that TPL Dataflow has that Channels doesn't is threading support. Although parallelisation is typically unnecessary for an ETL pipeline, it can be a nice pattern for isolation. An early build of Rowbot used ThreadLocal to guarantee isolation of dependent services by thread. In the end, this architecture proved overly complicated.</p><p>Rowbot built on .NET Channels moves everything to an asynchronous task programming model. Synchronisation between threads is now the responsiblity of the developer building the dependent service.</p> |
-
+| <p>One thing that TPL Dataflow has that Channels doesn't is threading support. Although parallelisation is typically unnecessary for an ETL pipeline, it can be a nice pattern for isolation. An early build of Rowbot used ThreadLocal to guarantee isolation of dependent services by thread. In the end, this architecture proved overly complicated.</p><p>Rowbot built on .NET Channels moves everything to an asynchronous task programming model. Synchronisation between threads is now the responsibility of the developer building the dependent service.</p> |
 
 ## Design
 

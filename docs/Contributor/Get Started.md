@@ -16,7 +16,7 @@ A connector is responsible for either reading from or writing to a data source. 
 ### Extractors, Transformers, and Loaders
 Extractors, transformers, and loaders allow a developer to customise the extract, transform, load (ETL) process. 
 
-- An **extractor** customises how data is queried from a source system. An example that is built into Rowbot is pagination. Rather than retreiving all data in a single query, the pagination extractor allows data to be queried in pages.<br />[Contributor -> Extractors](Extractors.md)
+- An **extractor** customises how data is queried from a source system. An example that is built into Rowbot is pagination. Rather than retrieving all data in a single query, the pagination extractor allows data to be queried in pages.<br />[Contributor -> Extractors](Extractors.md)
 
 - A **transformer** modifies data between extract and load. The built-in transformer allows the developer to run any code within a specified lambda function. An interface exists to give the developer more control over things like threading or dependency injection.<br />[Contributor -> Transformers](Transformers.md)<br />
   [Contributor -> Mapper](Mapper.md)
