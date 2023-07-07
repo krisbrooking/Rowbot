@@ -17,9 +17,11 @@ namespace Rowbot.Framework.Pipelines.Summary
                 return Task.FromResult(false);
             }
 
-            Console.WriteLine($"Total {GetRuntime(pipelineSummaries, 17)}");
-
             var groups = pipelineSummaries.GroupBy(x => x.Cluster);
+
+            var totalRuntime = groups.Select(x => x.Select(y => y.Runtime).Aggregate((acc, curr) => acc.Add(curr))).Max();
+
+            Console.WriteLine($"Total Runtime:{string.Empty.PadRight(17)}{totalRuntime.Minutes.ToString("00")}:{totalRuntime.Seconds.ToString("00")}:{totalRuntime.Milliseconds.ToString("00")}");
 
             if (groups.Count() == 1)
             {
