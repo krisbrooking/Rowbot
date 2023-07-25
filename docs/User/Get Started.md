@@ -88,8 +88,8 @@ public CustomerPipelines(IPipelineBuilder pipelineBuilder) { _pipelineBuilder = 
 public Pipeline Load() =>
     _pipelineBuilder
         .ExtractSqlite<SourceCustomer>(
-            "Data Source=.\\source.db",
-            "SELECT [CustomerId], [CustomerName] FROM [SourceCustomer]")
+            "Data Source=source.db",
+            "SELECT [CustomerId], [CustomerName] FROM [SourceCustomers]")
         .Transform<TargetCustomer>(
             (source, mapper) =>
                 source
@@ -99,7 +99,7 @@ public Pipeline Load() =>
                     Name = x.CustomerName
                 })
                 .ToArray())
-        .LoadSqlite("Data Source=.\\target.db")
+        .LoadSqlite("Data Source=target.db")
         .CopyRows();
 ```
 
@@ -174,3 +174,113 @@ Rowbot includes support for unit and integration testing.
 [User -> Unit Testing](Unit%20Testing.md)
 
 [User -> Integration Testing](Integration%20Testing.md)
+
+## Full Code Example
+Configuring Rowbot in a new project requires cloning the Rowbot repository and then creating a console project that references Rowbot.
+
+```console
+mkdir RowbotExample && cd RowbotExample
+
+git clone https://github.com/krisbrooking/Rowbot
+
+mkdir Example && cd Example
+
+dotnet new console
+dotnet add Example.csproj reference ../Rowbot/src/Rowbot/Rowbot.csproj
+dotnet add Example.csproj reference ../Rowbot/src/Rowbot.Connectors.Sqlite/Rowbot.Connectors.Sqlite.csproj
+dotnet add Example.csproj package Microsoft.Extensions.Hosting
+dotnet add Example.csproj package Microsoft.Extensions.DependencyInjection
+dotnet add Example.csproj package Microsoft.Data.Sqlite
+dotnet build && dotnet run
+```
+
+Program.cs
+```csharp
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Rowbot;
+using Rowbot.Connectors.Sqlite;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Example
+{
+    static class Program
+    {
+        static async Task Main(string[] args)
+        {
+            InitialiseDatabase();
+
+            var host = Host.CreateDefaultBuilder(args)
+                .ConfigureServices((services) =>
+                {
+                    services.AddRowbot();
+                    services.AddSqliteConnector();
+                    services.AddConsoleSummary();
+                })
+                .Build();
+
+            var pipelineRunner = host.Services.GetRequiredService<IPipelineRunner>();
+            await pipelineRunner.RunAsync();
+        }
+
+        static void InitialiseDatabase()
+        {
+            using (var db = new SqliteConnection($"Data Source=source.db"))
+            {
+                db.Open();
+
+                var createTableCommand = 
+                    new SqliteCommand(@"
+                        DROP TABLE IF EXISTS SourceCustomers;
+                        CREATE TABLE SourceCustomers (
+                            CustomerId INTEGER PRIMARY KEY,
+                            CustomerName NVARCHAR(100) NULL)", db);
+                createTableCommand.ExecuteReader();
+
+                var insertCommand = 
+                    new SqliteCommand(string.Join(';', Enumerable.Range(0, 100).Select(x => $"INSERT INTO SourceCustomers VALUES ({x}, 'Cust{x}')")), db);
+                insertCommand.ExecuteReader();
+            }
+        }
+    }
+
+    [Table("SourceCustomers")]
+    public sealed class SourceCustomer
+    {
+        public int CustomerId { get; set; }
+        public string? CustomerName { get; set; }
+    }
+
+    [Table("TargetCustomers")]
+    public sealed class TargetCustomer
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+    }
+
+    public class CustomerPipelines : IPipelineContainer
+    {
+        private readonly IPipelineBuilder _pipelineBuilder;
+
+        public CustomerPipelines(IPipelineBuilder pipelineBuilder) { _pipelineBuilder = pipelineBuilder; }
+
+        public Pipeline Load() =>
+            _pipelineBuilder
+                .ExtractSqlite<SourceCustomer>(
+                    "Data Source=source.db",
+                    "SELECT [CustomerId], [CustomerName] FROM [SourceCustomers]")
+                .Transform<TargetCustomer>(
+                    (source, mapper) =>
+                        source
+                        .Select(x => new TargetCustomer
+                        {
+                            Id = x.CustomerId,
+                            Name = x.CustomerName
+                        })
+                        .ToArray())
+                .LoadSqlite("Data Source=target.db")
+                .CopyRows();
+    }
+}
+```
