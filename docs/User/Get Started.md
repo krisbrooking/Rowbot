@@ -10,14 +10,14 @@ The following example demonstrates the most common elements of a Rowbot data pip
 public sealed class SourceCustomer
 {
     public int CustomerId { get; set; }
-    public string CustomerName { get; set; }
+    public string? CustomerName { get; set; }
 }
 
 [Table("TargetCustomers")]
 public sealed class TargetCustomer
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string? Name { get; set; }
 }
 
 public class CustomerPipelines : IPipelineContainer
@@ -29,8 +29,8 @@ public class CustomerPipelines : IPipelineContainer
     public Pipeline Load() =>
         _pipelineBuilder
             .ExtractSqlite<SourceCustomer>(
-                "Data Source=.\\source.db",
-                "SELECT [CustomerId], [CustomerName] FROM [SourceCustomer]")
+                "Data Source=source.db",
+                "SELECT [CustomerId], [CustomerName] FROM [SourceCustomers]")
             .Transform<TargetCustomer>(
                 (source, mapper) =>
                     source
@@ -40,7 +40,7 @@ public class CustomerPipelines : IPipelineContainer
                         Name = x.CustomerName
                     })
                     .ToArray())
-            .LoadSqlite("Data Source=.\\target.db")
+            .LoadSqlite("Data Source=target.db")
             .CopyRows();
 }
 ```
@@ -55,14 +55,14 @@ Two entities, `SourceCustomer` and `TargetCustomer` are defined. Entities descri
 public sealed class SourceCustomer
 {
     public int CustomerId { get; set; }
-    public string CustomerName { get; set; }
+    public string? CustomerName { get; set; }
 }
 
 [Table("TargetCustomers")]
 public sealed class TargetCustomer
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string? Name { get; set; }
 }
 ```
 
