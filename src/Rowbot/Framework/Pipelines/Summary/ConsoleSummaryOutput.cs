@@ -51,7 +51,15 @@ namespace Rowbot.Framework.Pipelines.Summary
             Console.WriteLine(GetUnderscoreBorder(windowWidth));
             Console.WriteLine();
 
-            Console.WriteLine(GetTableHeader());
+            if (windowWidth < 120)
+            {
+                Console.WriteLine("Terminal window must be at least 120 columns wide to display the table.");
+                Console.WriteLine(GetUnderscoreBorder(windowWidth));
+                Console.WriteLine();
+                return;
+            }
+
+            Console.WriteLine(GetTableHeader(windowWidth));
             Console.WriteLine(GetHyphenBorder(windowWidth));
 
             var group = 1;
@@ -126,8 +134,8 @@ namespace Rowbot.Framework.Pipelines.Summary
             return $"Runtime:{string.Empty.PadRight(spacing)}{totalRuntime.Minutes.ToString("00")}:{totalRuntime.Seconds.ToString("00")}:{totalRuntime.Milliseconds.ToString("00")}";
         }
 
-        private string GetTableHeader()
-            => "Cluster|Group|Container                   |Name                                       |Status |Runtime |Inserts |Updates";
+        private string GetTableHeader(int windowWidth)
+            => $"Cluster|Group|Container                   |Name{new String(' ', windowWidth - 81)}|Status |Runtime |Inserts |Updates";
 
         private string GetUnderscoreBorder(int windowWidth)
             => $"{new string(Enumerable.Range(0, windowWidth).Select(x => '_').ToArray())}";
