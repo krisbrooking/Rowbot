@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -20,6 +21,8 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
         [Fact]
         public async Task PipelineClusters_Should_ExecuteConcurrently()
         {
+            await SqliteTest.WriteRowsAsync(Enumerable.Empty<SourceCustomer>());
+
             var pipelineContainers = new Type[] { typeof(Cluster1Pipelines), typeof(Cluster2Pipelines), typeof(Cluster3Pipelines), typeof(Cluster4Pipelines), typeof(Cluster5Pipelines) };
 
             var watch = new Stopwatch();

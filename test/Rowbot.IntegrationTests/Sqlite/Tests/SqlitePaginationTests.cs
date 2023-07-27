@@ -31,6 +31,8 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
         [Fact]
         public async Task CursorPaginationZeroRows_Should_ExtractInPages()
         {
+            await SqliteTest.WriteRowsAsync(Enumerable.Empty<SourceCustomer>());
+
             await SqliteTest
                 .BuildRunner(typeof(CustomerPipelines))
                 .RunAsync(pipelines => pipelines.FilterByTag("CursorPagination"));
@@ -58,6 +60,8 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
         [Fact]
         public async Task OffsetPaginationZeroRows_Should_ExtractInPages()
         {
+            await SqliteTest.WriteRowsAsync(Enumerable.Empty<SourceCustomer>());
+
             await SqliteTest
                 .BuildRunner(typeof(CustomerPipelines))
                 .RunAsync(pipelines => pipelines.FilterByTag("OffsetPagination"));
