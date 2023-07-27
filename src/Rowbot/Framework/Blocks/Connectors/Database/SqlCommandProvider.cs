@@ -175,7 +175,7 @@ namespace Rowbot.Framework.Blocks.Connectors.Database
                                 return $"WHEN {whenCondition} THEN {thenStatement}";
                             });
 
-                        return $"[{changedField.Key.Name}] = CASE {string.Join(' ', updatesWithChangedField)} ELSE [{changedField.Key.Name}] END\r\n";
+                        return $"[{changedField.Key.Name}] = CASE {string.Join(' ', updatesWithChangedField)} ELSE [{changedField.Key.Name}] END{Environment.NewLine}";
                     });
 
                 return caseStatements;
@@ -314,7 +314,7 @@ namespace Rowbot.Framework.Blocks.Connectors.Database
                 tableColumnDefinition.Add($"PRIMARY KEY({string.Join(',', _entity.Descriptor.Value.KeyFields.Select(x => $"[{x.Name}]"))})");
             }
 
-            commandText.AppendLine(string.Join(",\r\n", tableColumnDefinition));
+            commandText.AppendLine(string.Join($",{Environment.NewLine}", tableColumnDefinition));
 
             commandText.Append(");");
             if (typeof(TEntity).IsAssignableTo(typeof(Row)))

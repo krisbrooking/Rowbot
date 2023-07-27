@@ -166,7 +166,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var updateCommands = sqlCommandProvider.GetUpdateCommands(source);
 
-            Assert.Equal("UPDATE [UpdateEntity] SET \r\n[Name] = CASE WHEN [UpdateKey] = @p0UpdateKey THEN @p0Name ELSE [Name] END\r\n, [Description] = CASE WHEN [UpdateKey] = @p1UpdateKey THEN @p1Description ELSE [Description] END\r\nWHERE ([UpdateKey] = @p0UpdateKey) OR ([UpdateKey] = @p1UpdateKey)", updateCommands.First().CommandText);
+            Assert.Equal($"UPDATE [UpdateEntity] SET {Environment.NewLine}[Name] = CASE WHEN [UpdateKey] = @p0UpdateKey THEN @p0Name ELSE [Name] END{Environment.NewLine}, [Description] = CASE WHEN [UpdateKey] = @p1UpdateKey THEN @p1Description ELSE [Description] END{Environment.NewLine}WHERE ([UpdateKey] = @p0UpdateKey) OR ([UpdateKey] = @p1UpdateKey)", updateCommands.First().CommandText);
         }
 
         [Fact]
@@ -199,8 +199,8 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var updateCommands = sqlCommandProvider.GetUpdateCommands(source, maxParameters: 5).ToList();
 
-            Assert.Equal("UPDATE [UpdateEntity] SET \r\n[Name] = CASE WHEN [UpdateKey] = @p0UpdateKey THEN @p0Name ELSE [Name] END\r\nWHERE ([UpdateKey] = @p0UpdateKey)", updateCommands.First().CommandText);
-            Assert.Equal("UPDATE [UpdateEntity] SET \r\n[Description] = CASE WHEN [UpdateKey] = @p0UpdateKey THEN @p0Description ELSE [Description] END\r\nWHERE ([UpdateKey] = @p0UpdateKey)", updateCommands.Last().CommandText);
+            Assert.Equal($"UPDATE [UpdateEntity] SET {Environment.NewLine}[Name] = CASE WHEN [UpdateKey] = @p0UpdateKey THEN @p0Name ELSE [Name] END{Environment.NewLine}WHERE ([UpdateKey] = @p0UpdateKey)", updateCommands.First().CommandText);
+            Assert.Equal($"UPDATE [UpdateEntity] SET {Environment.NewLine}[Description] = CASE WHEN [UpdateKey] = @p0UpdateKey THEN @p0Description ELSE [Description] END{Environment.NewLine}WHERE ([UpdateKey] = @p0UpdateKey)", updateCommands.Last().CommandText);
         }
 
         [Fact]
@@ -223,7 +223,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var updateCommands = sqlCommandProvider.GetUpdateCommands(source);
 
-            Assert.Equal("UPDATE [UpdateCompositeKeyEntity] SET \r\n[Name] = CASE WHEN [FirstKey] = @p0FirstKey AND [SecondKey] = @p0SecondKey THEN @p0Name ELSE [Name] END\r\n, [Description] = CASE WHEN [FirstKey] = @p1FirstKey AND [SecondKey] = @p1SecondKey THEN @p1Description ELSE [Description] END\r\nWHERE ([FirstKey] = @p0FirstKey AND [SecondKey] = @p0SecondKey) OR ([FirstKey] = @p1FirstKey AND [SecondKey] = @p1SecondKey)", updateCommands.First().CommandText);
+            Assert.Equal($"UPDATE [UpdateCompositeKeyEntity] SET {Environment.NewLine}[Name] = CASE WHEN [FirstKey] = @p0FirstKey AND [SecondKey] = @p0SecondKey THEN @p0Name ELSE [Name] END{Environment.NewLine}, [Description] = CASE WHEN [FirstKey] = @p1FirstKey AND [SecondKey] = @p1SecondKey THEN @p1Description ELSE [Description] END{Environment.NewLine}WHERE ([FirstKey] = @p0FirstKey AND [SecondKey] = @p0SecondKey) OR ([FirstKey] = @p1FirstKey AND [SecondKey] = @p1SecondKey)", updateCommands.First().CommandText);
         }
 
         [Fact]
@@ -247,7 +247,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var createCommand = sqlCommandProvider.GetCreateDataSetCommand();
 
-            Assert.Equal("CREATE TABLE IF NOT EXISTS [SourcePerson] (\r\n[First_Name] String(300) NULL,\r\n[Id] Int32(0) NOT NULL,\r\n[Last_Name] String(300) NULL\r\n);", createCommand.CommandText);
+            Assert.Equal($"CREATE TABLE IF NOT EXISTS [SourcePerson] ({Environment.NewLine}[First_Name] String(300) NULL,{Environment.NewLine}[Id] Int32(0) NOT NULL,{Environment.NewLine}[Last_Name] String(300) NULL{Environment.NewLine});", createCommand.CommandText);
         }
 
         [Fact]
@@ -267,7 +267,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var createCommand = sqlCommandProvider.GetCreateDataSetCommand();
 
-            Assert.Equal("CREATE TABLE IF NOT EXISTS [dbo].[AnnotatedEntities] (\r\n[Id] Int32(0) NOT NULL PRIMARY KEY,\r\n[ColumnName] String(300) NOT NULL,\r\n[Description] String(100) NULL\r\n);", createCommand.CommandText);
+            Assert.Equal($"CREATE TABLE IF NOT EXISTS [dbo].[AnnotatedEntities] ({Environment.NewLine}[Id] Int32(0) NOT NULL PRIMARY KEY,{Environment.NewLine}[ColumnName] String(300) NOT NULL,{Environment.NewLine}[Description] String(100) NULL{Environment.NewLine});", createCommand.CommandText);
         }
 
         [Fact]
@@ -277,7 +277,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var createCommand = sqlCommandProvider.GetCreateDataSetCommand();
 
-            Assert.Equal("CREATE TABLE IF NOT EXISTS [UpdateCompositeKeyEntity] (\r\n[FirstKey] Int32(0) NOT NULL AS IDENTITY,\r\n[SecondKey] Int32(0) NOT NULL AS IDENTITY,\r\n[Description] String(300) NULL,\r\n[Id] Int32(0) NOT NULL,\r\n[Name] String(300) NULL,\r\nPRIMARY KEY([FirstKey],[SecondKey])\r\n);", createCommand.CommandText);
+            Assert.Equal($"CREATE TABLE IF NOT EXISTS [UpdateCompositeKeyEntity] ({Environment.NewLine}[FirstKey] Int32(0) NOT NULL AS IDENTITY,{Environment.NewLine}[SecondKey] Int32(0) NOT NULL AS IDENTITY,{Environment.NewLine}[Description] String(300) NULL,{Environment.NewLine}[Id] Int32(0) NOT NULL,{Environment.NewLine}[Name] String(300) NULL,{Environment.NewLine}PRIMARY KEY([FirstKey],[SecondKey]){Environment.NewLine});", createCommand.CommandText);
         }
 
         [Fact]
@@ -287,7 +287,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var createCommand = sqlCommandProvider.GetCreateDataSetCommand();
 
-            Assert.Equal("CREATE TABLE IF NOT EXISTS [OneToOne] (\r\n[PrincipalId] Int32(0) NOT NULL PRIMARY KEY,\r\nFOREIGN KEY ([PrincipalId]) REFERENCES [Principal]([PrincipalId])\r\n);", createCommand.CommandText);
+            Assert.Equal($"CREATE TABLE IF NOT EXISTS [OneToOne] ({Environment.NewLine}[PrincipalId] Int32(0) NOT NULL PRIMARY KEY,{Environment.NewLine}FOREIGN KEY ([PrincipalId]) REFERENCES [Principal]([PrincipalId]){Environment.NewLine});", createCommand.CommandText);
         }
 
         [Fact]
@@ -297,7 +297,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var createCommand = sqlCommandProvider.GetCreateDataSetCommand();
 
-            Assert.Equal("CREATE TABLE IF NOT EXISTS [OneToMany] (\r\n[DependentId] Int32(0) NOT NULL PRIMARY KEY,\r\n[PrincipalId] Int32(0) NOT NULL,\r\nFOREIGN KEY ([PrincipalId]) REFERENCES [Principal]([PrincipalId])\r\n);", createCommand.CommandText);
+            Assert.Equal($"CREATE TABLE IF NOT EXISTS [OneToMany] ({Environment.NewLine}[DependentId] Int32(0) NOT NULL PRIMARY KEY,{Environment.NewLine}[PrincipalId] Int32(0) NOT NULL,{Environment.NewLine}FOREIGN KEY ([PrincipalId]) REFERENCES [Principal]([PrincipalId]){Environment.NewLine});", createCommand.CommandText);
         }
 
         [Fact]
@@ -307,7 +307,7 @@ namespace Rowbot.UnitTests.Framework.Blocks.Connectors.Database
 
             var createCommand = sqlCommandProvider.GetCreateDataSetCommand();
 
-            Assert.Equal("CREATE TABLE IF NOT EXISTS [ManyToMany] (\r\n[PrincipalId] Int32(0) NOT NULL,\r\n[AnnotatedEntityId] Int32(0) NOT NULL,\r\nFOREIGN KEY ([PrincipalId]) REFERENCES [Principal]([PrincipalId]),\r\nFOREIGN KEY ([AnnotatedEntityId]) REFERENCES [dbo].[AnnotatedEntities]([Id]),\r\nPRIMARY KEY([PrincipalId],[AnnotatedEntityId])\r\n);", createCommand.CommandText);
+            Assert.Equal($"CREATE TABLE IF NOT EXISTS [ManyToMany] ({Environment.NewLine}[PrincipalId] Int32(0) NOT NULL,{Environment.NewLine}[AnnotatedEntityId] Int32(0) NOT NULL,{Environment.NewLine}FOREIGN KEY ([PrincipalId]) REFERENCES [Principal]([PrincipalId]),{Environment.NewLine}FOREIGN KEY ([AnnotatedEntityId]) REFERENCES [dbo].[AnnotatedEntities]([Id]),{Environment.NewLine}PRIMARY KEY([PrincipalId],[AnnotatedEntityId]){Environment.NewLine});", createCommand.CommandText);
         }
         #endregion
 
