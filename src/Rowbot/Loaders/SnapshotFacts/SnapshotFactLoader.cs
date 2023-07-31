@@ -35,6 +35,9 @@ namespace Rowbot
             var keyField = _entity.Descriptor.Value.KeyFields.Single();
 
             var findResults = await connector.FindAsync(rows, compare => compare.Include(x => x.KeyHash), result => result.All());
+            var findResultsMap = findResults
+                .GroupBy(x => x.KeyHashBase64, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
             var keyAccessor = _entity.Accessor.Value.GetValueAccessor(keyField);
             var keyMapper = _entity.Accessor.Value.GetValueMapper(keyField);
 
@@ -52,14 +55,14 @@ namespace Rowbot
                 }
                 hashCodesProcessed.Add(row.KeyHashBase64);
 
-                var findResult = findResults.FirstOrDefault(x => x.KeyHash.SequenceEqual(row.KeyHash));
-                if (findResult is null)
+                if (!findResultsMap.ContainsKey(row.KeyHashBase64))
                 {
                     _logger.LogTrace("Inserting {keyhash}", row.KeyHashBase64);
                     rowsToInsert.Add(row);
 
                     continue;
                 }
+                var findResult = findResultsMap[row.KeyHashBase64];
 
                 var key = keyAccessor(findResult);
                 if (key is null)
