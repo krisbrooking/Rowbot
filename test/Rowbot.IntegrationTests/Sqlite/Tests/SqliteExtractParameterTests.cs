@@ -105,7 +105,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId] + @Parameter AS [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                    .IncludeOptions(options => options.AddParameters(new ExtractParameterCollection(new ExtractParameter($"Parameter", typeof(int), 10))))
+                    .WithDefaultExtractor(options => options.AddParameters(new ExtractParameterCollection(new ExtractParameter($"Parameter", typeof(int), 10))))
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .CopyRows();
@@ -116,7 +116,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId] + @Parameter AS [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                    .IncludeOptions(options => options.AddParameters(() => 
+                    .WithDefaultExtractor(options => options.AddParameters(() => 
                         Enumerable
                             .Range(0, 5)
                             .Select(x => new ExtractParameterCollection(new ExtractParameter($"Parameter", typeof(int), x * 10)))
@@ -131,7 +131,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId] + @Parameter AS [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                    .IncludeOptions(options => options.AddParameters(async () => 
+                    .WithDefaultExtractor(options => options.AddParameters(async () => 
                         await Task.FromResult(
                             Enumerable
                                 .Range(0, 5)
@@ -147,16 +147,17 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName] || @Parameter AS [CustomerName], [Inactive] FROM [SourceCustomer] WHERE [CustomerId] > @CustomerId ORDER BY [CustomerId] LIMIT @BatchSize")
-                    .IncludeOptions(options =>
-                    {
-                        options.BatchSize = 10;
-                        options.AddParameters(() =>
-                            Enumerable
-                                .Range(0, 5)
-                                .Select(x => new ExtractParameterCollection(new ExtractParameter($"Parameter", typeof(int), x * 10)))
-                                .ToList());
-                    })
-                    .WithCursorPagination(x => x.CustomerId)
+                    .WithCursorPagination(
+                        x => x.CustomerId,
+                        options =>
+                        {
+                            options.BatchSize = 10;
+                            options.AddParameters(() =>
+                                Enumerable
+                                    .Range(0, 5)
+                                    .Select(x => new ExtractParameterCollection(new ExtractParameter($"Parameter", typeof(int), x * 10)))
+                                    .ToList());
+                        })
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .CopyRows();
@@ -167,16 +168,15 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName] || @Parameter AS [CustomerName], [Inactive] FROM [SourceCustomer] ORDER BY [CustomerId] LIMIT @BatchSize OFFSET @Offset")
-                    .IncludeOptions(options =>
-                    {
-                        options.BatchSize = 10;
-                        options.AddParameters(() =>
-                            Enumerable
-                                .Range(0, 5)
-                                .Select(x => new ExtractParameterCollection(new ExtractParameter($"Parameter", typeof(int), x * 10)))
-                                .ToList());
-                    })
-                    .WithOffsetPagination()
+                    .WithOffsetPagination(options =>
+                        {
+                            options.BatchSize = 10;
+                            options.AddParameters(() =>
+                                Enumerable
+                                    .Range(0, 5)
+                                    .Select(x => new ExtractParameterCollection(new ExtractParameter($"Parameter", typeof(int), x * 10)))
+                                    .ToList());
+                        })
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .CopyRows();

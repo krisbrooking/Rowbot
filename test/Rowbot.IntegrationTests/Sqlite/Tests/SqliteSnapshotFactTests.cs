@@ -129,7 +129,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSlowlyChangingDimension();
@@ -149,7 +149,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceProduct>(
                         SqliteTest.ConnectionString,
                         "SELECT [ProductId], [ProductName], [Price], [Cost] FROM [SourceProduct]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Product>((source, mapper) => mapper.Apply(source), mapper => Product.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSlowlyChangingDimension();
@@ -168,7 +168,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                 _pipelineBuilder
                     .ExtractSqlite<SourceOrder>(SqliteTest.ConnectionString,
                         "SELECT [OrderId], [OrderDate] FROM [SourceOrder]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Order>((source, mapper) => mapper.Apply(source), mapper => Order.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSlowlyChangingDimension();
@@ -188,7 +188,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceOrderLine>(
                         SqliteTest.ConnectionString,
                         "SELECT [OrderLineId], [OrderId], [CustomerId], [ProductId], [Quantity] FROM [SourceOrderLine]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<OrderLine>((source, mapper) => mapper.Apply(source), mapper => OrderLine.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSnapshotFact();
@@ -207,7 +207,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                         WHERE 
 	                        orderLine.[IsDeleted] = 0 AND
 	                        source.[OrderLineId] IS NULL")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<OrderLine>(
                     (source, mapper) =>
                     {

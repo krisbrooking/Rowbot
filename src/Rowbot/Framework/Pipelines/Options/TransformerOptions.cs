@@ -1,10 +1,10 @@
 ﻿namespace Rowbot.Framework.Pipelines.Options
 {
-    public sealed class TransformOptions
+    public class TransformerOptions
     {
-        public TransformOptions() { }
+        public TransformerOptions() { }
 
-        public TransformOptions(int workerCount)
+        public TransformerOptions(int workerCount)
         {
             WorkerCount = workerCount;
         }

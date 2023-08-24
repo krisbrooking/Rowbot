@@ -1,9 +1,10 @@
 ﻿using Rowbot.Connectors.Null;
+using Rowbot.Framework.Pipelines.Options;
 using System.Runtime.CompilerServices;
 
 namespace Rowbot.Extractors.Default
 {
-    public class DefaultExtractor<TSource> : IExtractor<TSource, DefaultExtractorOptions<TSource>>
+    public class DefaultExtractor<TSource> : IExtractor<TSource, ExtractorOptions>
     {
         public DefaultExtractor()
         {
@@ -11,7 +12,7 @@ namespace Rowbot.Extractors.Default
             Connector = new NullReadConnector<TSource>();
         }
 
-        public DefaultExtractorOptions<TSource> Options { get; set; }
+        public ExtractorOptions Options { get; set; }
         public IReadConnector<TSource> Connector { get; set; }
 
         public async IAsyncEnumerable<TSource> ExtractAsync(ExtractParameterCollection userDefinedParameters, [EnumeratorCancellation] CancellationToken cancellationToken = default)

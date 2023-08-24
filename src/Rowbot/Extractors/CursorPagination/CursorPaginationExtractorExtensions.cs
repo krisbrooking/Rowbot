@@ -1,6 +1,7 @@
 ﻿using Rowbot.Extractors.CursorPagination;
 using Rowbot.Extractors.CursorPagination.CursorTypes;
 using Rowbot.Framework.Blocks.Extractors.Pagination;
+using Rowbot.Framework.Pipelines.Options;
 using System.Linq.Expressions;
 
 namespace Rowbot
@@ -13,7 +14,7 @@ namespace Rowbot
         /// </para>
         /// <para>
         /// This extractor generates two extract parameters that must be included in your query.<br />
-        /// 1. Batch size. The @BatchSize parameter defaults to 1000. This can be modified by changing the BatchSize property of the extractor using the <see cref="PipelineBuilderExtensions.WithOptions{TSource}(IPipelineExtractor{TSource}, Action{Framework.Pipelines.Options.ExtractOptions})"/> extension.<br/>
+        /// 1. Batch size. The @BatchSize parameter defaults to 1000. This can be modified by changing the BatchSize property of the extractor using the <see cref="PipelineBuilderExtensions.WithOptions{TSource}(IPipelineExtractor{TSource}, Action{Framework.Pipelines.Options.ExtractorOptions})"/> extension.<br/>
         /// 2. Cursor. The name of the cursor parameter to use in your query is the same as the selected property. E.g. for selector x => x.Id, query parameter is @Id
         /// </para>
         /// <para>
@@ -164,7 +165,7 @@ namespace Rowbot
         }
     }
 
-    public class CursorPaginationOptions<TSource, TCursor>
+    public class CursorPaginationOptions<TSource, TCursor> : ExtractorOptions
     {
         internal Expression<Func<TSource, TCursor>>? Cursor { get; set; }
         public TCursor? InitialValue { get; set; }

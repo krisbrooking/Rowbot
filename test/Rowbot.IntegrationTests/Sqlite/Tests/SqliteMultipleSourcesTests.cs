@@ -84,7 +84,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSlowlyChangingDimension();
@@ -104,7 +104,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SecondSourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SecondSourceCustomer]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSlowlyChangingDimension();
@@ -138,7 +138,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                         WHERE
 	                        source.[CustomerId] IS NULL
                         ")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSlowlyChangingDimension();
@@ -164,7 +164,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
 	                        customer.[IsActive] = 1 AND
 	                        customer.[Source] = 2 AND
 	                        (second.[CustomerId] IS NULL OR mapping.[SourceCustomerId] IS NOT NULL)")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>(
                         (source, mapper) =>
                         {

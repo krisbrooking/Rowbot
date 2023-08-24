@@ -6,8 +6,8 @@ namespace Rowbot.Framework.Blocks
     public sealed class BlockContext
     {
         public Action<IBlockSummary>? SummaryCallback { get; set; }
-        public ExtractOptions ExtractOptions { get; set; } = new();
-        public TransformOptions TransformerOptions { get; set; } = new();
-        public LoadOptions LoadOptions { get; set; } = new();
+        public ExtractorOptions ExtractorOptions { get; set; } = new();
+        public TransformerOptions TransformerOptions { get; set; } = new();
+        public LoaderOptions LoaderOptions { get; set; } = new();
     }
 }

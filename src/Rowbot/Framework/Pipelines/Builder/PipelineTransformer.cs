@@ -1,5 +1,6 @@
 ﻿using Rowbot.Framework.Blocks;
 using Rowbot.Framework.Pipelines.Builder;
+using Rowbot.Framework.Pipelines.Options;
 using Rowbot.Transformers.Default;
 
 namespace Rowbot
@@ -25,11 +26,13 @@ namespace Rowbot
         /// <typeparam name="TTarget">The type that this transformer, transforms data into</typeparam>
         /// <typeparam name="TOptions">The options type of the transformer</typeparam>
         IPipelineTransformer<TSource, TTarget> AddTransformer<TService, TTarget, TOptions>(TOptions options)
-            where TService : notnull, ITransformer<TSource, TTarget, TOptions>;
+            where TService : notnull, ITransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions;
 
         /// <inheritdoc cref="AddTransformer{TService, TTarget, TOptions}(TOptions)"/>
         IPipelineTransformer<TSource, TTarget> AddTransformer<TService, TTarget, TOptions>(Action<TOptions>? configure = null)
-            where TService : notnull, ITransformer<TSource, TTarget, TOptions>;
+            where TService : notnull, ITransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions;
 
         /// <summary>
         /// Transforms data with the default asynchronous transformer.
@@ -72,17 +75,21 @@ namespace Rowbot
 
         public IPipelineTransformer<TSource, TTarget> AddTransformer<TService, TTarget, TOptions>(TOptions options)
             where TService : notnull, ITransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions
         {
             var transformer = _context.ServiceFactory.CreateTransformer<TService, TSource, TTarget, TOptions>(options);
 
             var transformBlock = new TransformBlock<TSource, TTarget>(transformer, _context.LoggerFactory, 1);
             _context.Definition.Blocks.Enqueue(transformBlock, _context.Definition.Blocks.Count + 100);
 
+            _context.Definition.BlockContext.TransformerOptions = options;
+
             return new PipelineTransformer<TSource, TTarget>(_context);
         }
 
         public IPipelineTransformer<TSource, TTarget> AddTransformer<TService, TTarget, TOptions>(Action<TOptions>? configure = null)
             where TService : notnull, ITransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions
         {
             var options = Activator.CreateInstance<TOptions>();
             configure?.Invoke(options);
@@ -115,6 +122,8 @@ namespace Rowbot
 
             var transformBlock = new TransformBlock<TSource, TTarget>(transformer, _context.LoggerFactory, 1);
             _context.Definition.Blocks.Enqueue(transformBlock, _context.Definition.Blocks.Count + 100);
+
+            _context.Definition.BlockContext.TransformerOptions = options;
 
             return new PipelineTransformer<TSource, TTarget>(_context);
         }

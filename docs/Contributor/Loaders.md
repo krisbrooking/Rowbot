@@ -49,7 +49,7 @@ Custom loaders are designed to be simple to plug-in to the pipeline builder.
 The options class for `FactLoader` requires no configurable state.
 See [src\Rowbot\Loaders\Facts\FactLoaderOptions.cs](../../src/Rowbot/Loaders/Facts/FactLoaderOptions.cs)
 
-`ILoader` requires a generic argument `TOptions`. This is a class that holds any user-configurable state required by the loader. A loader is required to include this options class even if there is no user-configurable state. The rationale behind this decision is that in most cases additional state is required and in cases where it is not, an empty class is only visible to the developer of the loader and not to the user.
+`ILoader` requires a generic argument `TOptions` that inherits from `LoaderOptions`. This is a class that holds any user-configurable state required by the loader.
 
 | :information_source: Technical Note |
 | --- |

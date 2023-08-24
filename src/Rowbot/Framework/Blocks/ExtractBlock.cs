@@ -41,19 +41,19 @@ namespace Rowbot.Framework.Blocks
 
                         try
                         {
-                            var result = new List<TOutput>(_blockContext.ExtractOptions.BatchSize);
+                            var result = new List<TOutput>(_blockContext.ExtractorOptions.BatchSize);
 
-                            await foreach (var userParameters in _blockContext.ExtractOptions.ExtractParameterGenerator.GenerateAsync())
-                            await foreach (var item in _source.ExtractAsync(userParameters.AddBatchSizeParameter(_blockContext.ExtractOptions.BatchSize), _cancellationToken))
+                            await foreach (var userParameters in _blockContext.ExtractorOptions.ExtractParameterGenerator.GenerateAsync())
+                            await foreach (var item in _source.ExtractAsync(userParameters.AddBatchSizeParameter(_blockContext.ExtractorOptions.BatchSize), _cancellationToken))
                             {
                                 result.Add(item);
-                                if (result.Count == _blockContext.ExtractOptions.BatchSize)
+                                if (result.Count == _blockContext.ExtractorOptions.BatchSize)
                                 {
                                     await WriterOut.WriteAsync(result.ToArray()).ConfigureAwait(false);
-                                    result = new List<TOutput>(_blockContext.ExtractOptions.BatchSize);
+                                    result = new List<TOutput>(_blockContext.ExtractorOptions.BatchSize);
 
                                     blockSummary.TotalBatches++;
-                                    blockSummary.RowsExtracted += _blockContext.ExtractOptions.BatchSize;
+                                    blockSummary.RowsExtracted += _blockContext.ExtractorOptions.BatchSize;
                                 }
                             }
 

@@ -14,7 +14,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -35,7 +37,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -56,7 +60,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -77,7 +83,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -98,7 +106,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -119,7 +129,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -140,7 +152,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -161,7 +175,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -182,7 +198,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -203,7 +221,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue, options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 
@@ -224,7 +244,9 @@ namespace Rowbot.Extractors.CursorPagination.CursorTypes
 
             return new CursorPaginationExtractorOptions<TSource>
             {
-                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue ?? " ", options.OrderBy)
+                DataPagerFactory = () => GetDataPager(options.Cursor, options.InitialValue ?? " ", options.OrderBy),
+                BatchSize = options.BatchSize,
+                ExtractParameterGenerator = options.ExtractParameterGenerator
             };
         }
 

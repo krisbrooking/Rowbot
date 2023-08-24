@@ -1,6 +1,7 @@
 ﻿using Rowbot.Framework.Blocks;
 using Rowbot.Framework.Pipelines;
 using Rowbot.Framework.Pipelines.Builder;
+using Rowbot.Framework.Pipelines.Options;
 
 namespace Rowbot
 {
@@ -17,7 +18,8 @@ namespace Rowbot
         /// <typeparam name="TService">A loader that implements <see cref="ILoader{TTarget, TOptions}"/></typeparam>
         /// <typeparam name="TOptions">The options type of the loader</typeparam>
         Pipeline WithLoader<TService, TOptions>(TOptions options)
-            where TService : notnull, ILoader<TTarget, TOptions>;
+            where TService : notnull, ILoader<TTarget, TOptions>
+            where TOptions : LoaderOptions;
     }
 
     public sealed class PipelineLoader<TTarget> : IPipelineLoader<TTarget>, ICustomPipelineLoader<TTarget>
@@ -33,6 +35,7 @@ namespace Rowbot
 
         public Pipeline WithLoader<TService, TOptions>(TOptions options)
             where TService : notnull, ILoader<TTarget, TOptions>
+            where TOptions : LoaderOptions
         {
             _context.Definition.DependencyResolution.SetTargetEntity(typeof(TService));
 
@@ -41,6 +44,8 @@ namespace Rowbot
             var loaderBlock = new LoadBlock<TTarget>(loader, _context.LoggerFactory, 1);
 
             _context.Definition.Blocks.Enqueue(loaderBlock, _context.Definition.Blocks.Count + 100);
+
+            _context.Definition.BlockContext.LoaderOptions = options;
 
             var writeConnector = _writeConnectorFactory();
             if (writeConnector is ISchemaConnector schemaConnector)

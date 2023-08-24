@@ -48,9 +48,11 @@ Whether or not to create a custom connector for these sort of scenarios is a des
 | **Read Connector** | Responsible for querying data |
 
 #### Providing Additional Context via Extract Parameters
-The extractor uses extract parameters to modify a query. An extract parameter is a key value pair. The read connector's `QueryAsync()` method accepts a list of extract parameters as a parameter.
+The extractor uses extract parameters to modify a query. An extractor can generate and/or provide user-generated extract parameters.
 
-An extractor can generate and/or provide user-defined extract parameters. Pipeline builder includes an extension method for configuring common options. The `IncludeOptions()` method supports adding parameters using either `AddParameter` that accepts a single extract parameter, or `AddParameters` that accepts a factory that generates extract parameters. Factory methods are invoked by the extractor during pipeline execution.
+Some extractors generate their own extract parameters. For example, cursor pagination requires keeping track of a cursor and passing it to the read connector to include in each query.
+
+Extractors can also optionally forward user-generated extract parameters to their read connectors. Every extractor specifies an options class in its definition. This class must inherit from `ExtractorOptions` (`ExtractorOptions` can be used directly if no custom options are required). `ExtractorOptions` includes methods that allow a user to provide extract parameters to the extractor. `AddParameter()` accepts a single extract parameter, and `AddParameters()` accepts a factory that generates extract parameters. Factory methods are invoked by the extractor during pipeline execution.
 
 See more [User -> Extractors](../../docs/User/Extractors.md)
 
@@ -74,7 +76,7 @@ An extractor implements `IExtractor<TSource, TOptions>` which includes an `Extra
 > There is no synchronous version of the `Extract()` method. The justification for this decision is that most connectors are asynchronous or have an asynchronous overload because most connectors are IO-bound. All connectors are assumed to be asynchronous for the same reason.
 
 ### Data Batching
-The transformer and loader accept batched data. The extract block is therefore responsible for receiving streaming data from an extractor and batching that data before passing it on to the transform block. Batch size is configured using the `IncludeOptions()` extension method of the pipeline builder.
+The transformer and loader accept batched data. The extract block is therefore responsible for receiving streaming data from an extractor and batching that data before passing it on to the transform block. Batch size is configured using the `BatchSize` property of the `ExtractorOptions` class. Extractors can set the value of this property internally and/or can optionally allow the user to modify it.
 
 ```mermaid
 graph TD;
@@ -108,7 +110,7 @@ Custom extractors are designed to be simple to plug-in to the pipeline builder.
 The options class for `OffsetPaginationExtractor` includes a data pager factory `Func<IDataPager<TSource>>` property. The data pager calculates the extract parameters required to query the next page of data.
 See [src\Rowbot\Extractors\OffsetPagination\OffsetPaginationExtractorOptions.cs](../../src/Rowbot/Extractors/OffsetPagination/OffsetPaginationExtractorOptions.cs)
 
-`IExtractor` requires a generic argument `TOptions`. This is a class that holds any user-configurable state required by the extractor. An extractor is required to include this options class even if there is no user-configurable state. The rationale behind this decision is that in most cases additional state is required and in cases where it is not, an empty class is only visible to the developer of the extractor and not to the user.
+`IExtractor` requires a generic argument `TOptions` that inherits from `ExtractorOptions`. This is a class that holds any user-configurable state required by the extractor.
 
 | :information_source: Developer Note |
 | --- |

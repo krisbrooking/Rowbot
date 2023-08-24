@@ -38,7 +38,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
         private static Pipeline GetPipeline(IPipelineBuilder pipelineBuilder) =>
             pipelineBuilder
                 .ExtractSqlite<SourceCustomer>(SqliteTest.ConnectionString, "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                .IncludeOptions(options => options.AddParameters(async () =>
+                .WithDefaultExtractor(options => options.AddParameters(async () =>
                 {
                     await Task.Delay(DELAY);
                     return new List<ExtractParameterCollection> { new ExtractParameterCollection(new ExtractParameter("Parameter", typeof(int), 10)) };

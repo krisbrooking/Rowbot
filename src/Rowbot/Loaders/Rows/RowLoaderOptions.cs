@@ -1,6 +1,8 @@
-﻿namespace Rowbot.Loaders.Rows
+﻿using Rowbot.Framework.Pipelines.Options;
+
+namespace Rowbot.Loaders.Rows
 {
-    public sealed class RowLoaderOptions<TTarget>
+    public sealed class RowLoaderOptions<TTarget> : LoaderOptions
     {
 
     }

@@ -29,18 +29,19 @@ The fact loader differs from the row loader in that it does not insert a row tha
 public Pipeline Load() =>
     _pipelineBuilder
         .ExtractSqlite<SourceCustomer>(...)
-        .Transform<Customer>((source, mapper) =>
-            source
-            .Select(x => mapper.Apply(new Customer
+        .Transform<Customer>(
+            (source, mapper) =>
+                source
+                .Select(x => mapper.Apply(new Customer
+                {
+                    CustomerId = x.Id,
+                    CustomerName = x.Name
+                }))
+                .ToArray(),
+            mapperConfiguration =>
             {
-                CustomerId = x.Id,
-                CustomerName = x.Name
-            }))
-            .ToArray(),
-        mapperConfiguration =>
-        {
-            mapperConfiguration.Transform.ToHashCode(hash => hash.Include(x => x.CustomerId), target => target.KeyHash);
-        })
+                mapperConfiguration.Transform.ToHashCode(hash => hash.Include(x => x.CustomerId), target => target.KeyHash);
+            })
         .LoadSqlite(targetConnectionString)
         .WithFact();
 ```
@@ -54,19 +55,20 @@ The snapshot fact loader differs from the fact loader in that it supports updati
 public Pipeline Load() =>
     _pipelineBuilder
         .ExtractSqlite<SourceCustomer>(...)
-        .Transform<Customer>((source, mapper) =>
-            source
-            .Select(x => mapper.Apply(new Customer
+        .Transform<Customer>(
+            (source, mapper) =>
+                source
+                .Select(x => mapper.Apply(new Customer
+                {
+                    CustomerId = x.Id,
+                    CustomerName = x.Name
+                }))
+                .ToArray(),
+            mapperConfiguration =>
             {
-                CustomerId = x.Id,
-                CustomerName = x.Name
-            }))
-            .ToArray(),
-        mapperConfiguration =>
-        {
-            mapperConfiguration.Transform.ToHashCode(hash => hash.Include(x => x.CustomerId), target => target.KeyHash);
-            mapperConfiguration.Transform.ToHashCode(hash => hash.All(), target => target.ChangeHash);
-        })
+                mapperConfiguration.Transform.ToHashCode(hash => hash.Include(x => x.CustomerId), target => target.KeyHash);
+                mapperConfiguration.Transform.ToHashCode(hash => hash.All(), target => target.ChangeHash);
+            })
         .LoadSqlite(targetConnectionString)
         .WithSnapshotFact();
 ```
@@ -80,19 +82,20 @@ The slowly changing dimension loader differs from the snapshot fact loader in th
 public Pipeline Load() =>
     _pipelineBuilder
         .ExtractSqlite<SourceCustomer>(...)
-        .Transform<Customer>((source, mapper) =>
-            source
-            .Select(x => mapper.Apply(new Customer
+        .Transform<Customer>(
+            (source, mapper) =>
+                source
+                .Select(x => mapper.Apply(new Customer
+                {
+                    CustomerId = x.Id,
+                    CustomerName = x.Name
+                }))
+                .ToArray(),
+            mapperConfiguration =>
             {
-                CustomerId = x.Id,
-                CustomerName = x.Name
-            }))
-            .ToArray(),
-        mapperConfiguration =>
-        {
-            mapperConfiguration.Transform.ToHashCode(hash => hash.Include(x => x.CustomerId), target => target.KeyHash);
-            mapperConfiguration.Transform.ToHashCode(hash => hash.All(), target => target.ChangeHash);
-        })
+                mapperConfiguration.Transform.ToHashCode(hash => hash.Include(x => x.CustomerId), target => target.KeyHash);
+                mapperConfiguration.Transform.ToHashCode(hash => hash.All(), target => target.ChangeHash);
+            })
         .LoadSqlite(targetConnectionString)
         .WithSlowlyChangingDimension();
 ```

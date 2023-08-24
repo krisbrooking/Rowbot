@@ -1,4 +1,6 @@
-﻿namespace Rowbot.Framework.Pipelines.Builder
+﻿using Rowbot.Framework.Pipelines.Options;
+
+namespace Rowbot.Framework.Pipelines.Builder
 {
     public sealed class ServiceFactory
     {
@@ -29,6 +31,7 @@
 
         public TService CreateExtractor<TService, TSource, TOptions>(TOptions options, IReadConnector<TSource> connector)
             where TService : notnull, IExtractor<TSource, TOptions>
+            where TOptions : ExtractorOptions
         {
             var service = _getRequiredService.Invoke<TService>();
             service.Options = options;
@@ -39,6 +42,7 @@
 
         public TService CreateTransformer<TService, TSource, TTarget, TOptions>(TOptions options)
             where TService : notnull, ITransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions
         {
             var service = _getRequiredService.Invoke<TService>();
             service.Options = options;
@@ -48,6 +52,7 @@
 
         internal TService CreateSynchronousTransformer<TService, TSource, TTarget, TOptions>(TOptions options)
             where TService : notnull, ISynchronousTransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions
         {
             var service = _getRequiredService.Invoke<TService>();
             service.Options = options;
@@ -57,6 +62,7 @@
 
         public TService CreateLoader<TService, TTarget, TOptions>(TOptions options, IWriteConnector<TTarget> connector)
             where TService : notnull, ILoader<TTarget, TOptions>
+            where TOptions : LoaderOptions
         {
             var service = _getRequiredService.Invoke<TService>();
             service.Options = options;

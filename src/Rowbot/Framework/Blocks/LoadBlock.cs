@@ -29,7 +29,7 @@ namespace Rowbot.Framework.Blocks
 
             return async () =>
             {
-                var workers = Enumerable.Range(0, _blockContext.LoadOptions.WorkerCount)
+                var workers = Enumerable.Range(0, _blockContext.LoaderOptions.WorkerCount)
                     .Select(_ => Task.Run(async () =>
                     {
                         var logger = _loggerFactory.CreateLogger<LoadBlock<TInput>>();
@@ -50,7 +50,7 @@ namespace Rowbot.Framework.Blocks
                             {
                                 blockSummary.Exceptions.TryAdd(ex.Message, (ex, blockSummary.TotalBatches));
                                 logger.LogError(ex, ex.Message);
-                                if (exceptionCount++ == _blockContext.LoadOptions.MaxExceptions)
+                                if (exceptionCount++ == _blockContext.LoaderOptions.MaxExceptions)
                                 {
                                     logger.LogError("Max exceptions reached, exiting worker");
                                     return;

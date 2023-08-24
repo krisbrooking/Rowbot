@@ -1,4 +1,6 @@
-﻿namespace Rowbot
+﻿using Rowbot.Framework.Pipelines.Options;
+
+namespace Rowbot
 {
     /// <summary>
     /// <para>
@@ -32,6 +34,7 @@
     /// <typeparam name="TSource">Source entity</typeparam>
     /// <typeparam name="TOptions">Extractor options type</typeparam>
     public interface IExtractor<TSource, TOptions> : IExtractor<TSource>
+        where TOptions : ExtractorOptions
     {
         /// <summary>
         /// Extractor options. Used to provide configuration from pipeline builder to the extractor.

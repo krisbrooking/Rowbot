@@ -55,7 +55,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .CopyRows();

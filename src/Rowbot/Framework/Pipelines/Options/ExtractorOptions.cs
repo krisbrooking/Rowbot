@@ -2,18 +2,18 @@
 
 namespace Rowbot.Framework.Pipelines.Options
 {
-    public sealed class ExtractOptions
+    public class ExtractorOptions
     {
-        public ExtractOptions() { }
+        public ExtractorOptions() { }
 
-        public ExtractOptions(int batchSize)
+        public ExtractorOptions(int batchSize)
         {
             BatchSize = batchSize;
         }
 
         public int BatchSize { get; set; } = 1000;
 
-        internal ExtractParameterGenerator ExtractParameterGenerator { get; private set; } = new();
+        public ExtractParameterGenerator ExtractParameterGenerator { get; set; } = new();
         public void AddParameter<T>(string parameterName, T? parameterValue, bool isNullable = false) 
             => ExtractParameterGenerator.Add(new ExtractParameter(parameterName, typeof(T), parameterValue, isNullable));
         public void AddParameter(ExtractParameter parameter) 

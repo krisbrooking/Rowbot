@@ -2,6 +2,7 @@
 using Rowbot.Framework.Blocks;
 using Rowbot.Framework.Pipelines;
 using Rowbot.Framework.Pipelines.Builder;
+using Rowbot.Framework.Pipelines.Options;
 using Rowbot.Transformers.Default;
 
 namespace Rowbot
@@ -23,7 +24,8 @@ namespace Rowbot
         /// <typeparam name="TService">An extractor that implements <see cref="IExtractor{TSource, TOptions}"/></typeparam>
         /// <typeparam name="TOptions">The options type of the extractor</typeparam>
         IPipelineTransformer<TSource, TSource> WithExtractor<TService, TOptions>(TOptions options)
-            where TService : notnull, IExtractor<TSource, TOptions>;
+            where TService : notnull, IExtractor<TSource, TOptions>
+            where TOptions : ExtractorOptions;
     }
 
     public sealed class PipelineExtractor<TSource> : IPipelineExtractor<TSource>, ICustomPipelineExtractor<TSource>
@@ -39,17 +41,21 @@ namespace Rowbot
 
         public IPipelineTransformer<TSource, TSource> WithExtractor<TService, TOptions>(TOptions options)
             where TService : notnull, IExtractor<TSource, TOptions>
+            where TOptions : ExtractorOptions
         {
             var extractor = _context.ServiceFactory.CreateExtractor<TService, TSource, TOptions>(options, _readConnectorFactory());
 
             var sourceBlock = new ExtractBlock<TSource>(extractor, _context.LoggerFactory);
             _context.Definition.Blocks.Enqueue(sourceBlock, _context.Definition.Blocks.Count + 100);
 
+            _context.Definition.BlockContext.ExtractorOptions = options;
+
             return new PipelineTransformer<TSource, TSource>(_context);
         }
 
         public IPipelineTransformer<TSource, TTarget> AddTransformer<TService, TTarget, TOptions>(TOptions options)
             where TService : notnull, ITransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions
         {
             QueueDefaultExtractor();
 
@@ -58,11 +64,14 @@ namespace Rowbot
             var transformBlock = new TransformBlock<TSource, TTarget>(transformer, _context.LoggerFactory, 1);
             _context.Definition.Blocks.Enqueue(transformBlock, _context.Definition.Blocks.Count + 100);
 
+            _context.Definition.BlockContext.TransformerOptions = options;
+
             return new PipelineTransformer<TSource, TTarget>(_context);
         }
 
         public IPipelineTransformer<TSource, TTarget> AddTransformer<TService, TTarget, TOptions>(Action<TOptions>? configure = null)
             where TService : notnull, ITransformer<TSource, TTarget, TOptions>
+            where TOptions : TransformerOptions
         {
             var options = Activator.CreateInstance<TOptions>();
             configure?.Invoke(options);
@@ -114,7 +123,7 @@ namespace Rowbot
         private void QueueDefaultExtractor()
         {
             var options = new DefaultExtractorOptions<TSource>();
-            var extractor = _context.ServiceFactory.CreateExtractor<DefaultExtractor<TSource>, TSource, DefaultExtractorOptions<TSource>>(options, _readConnectorFactory());
+            var extractor = _context.ServiceFactory.CreateExtractor<DefaultExtractor<TSource>, TSource, ExtractorOptions>(options, _readConnectorFactory());
 
             var sourceBlock = new ExtractBlock<TSource>(extractor, _context.LoggerFactory);
             _context.Definition.Blocks.Enqueue(sourceBlock, _context.Definition.Blocks.Count + 100);

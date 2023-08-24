@@ -86,8 +86,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer] WHERE [CustomerId] > @CustomerId ORDER BY [CustomerId] LIMIT @BatchSize")
-                    .IncludeOptions(options => options.BatchSize = 10)
-                    .WithCursorPagination(x => x.CustomerId)
+                    .WithCursorPagination(x => x.CustomerId, options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .CopyRows();
@@ -98,8 +97,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer] ORDER BY [CustomerId] LIMIT @BatchSize OFFSET @Offset")
-                    .IncludeOptions(options => options.BatchSize = 10)
-                    .WithOffsetPagination()
+                    .WithOffsetPagination(options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .CopyRows();

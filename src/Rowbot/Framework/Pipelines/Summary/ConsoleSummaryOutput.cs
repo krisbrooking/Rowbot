@@ -31,8 +31,8 @@ namespace Rowbot.Framework.Pipelines.Summary
             {
                 foreach (var group in groups)
                 {
-                    Console.WriteLine($"'{TruncateClusterName(group.Key)}' {GetSummary(group.ToList(), 8 - group.Key.Length)}");
-                    Console.WriteLine($"'{TruncateClusterName(group.Key)}' {GetRuntime(group.ToList(), 20 - group.Key.Length)}");
+                    Console.WriteLine($"'{TruncateClusterName(group.Key)}' {GetSummary(group.ToList(), Math.Max(8 - group.Key.Length, 1))}");
+                    Console.WriteLine($"'{TruncateClusterName(group.Key)}' {GetRuntime(group.ToList(), Math.Max(20 - group.Key.Length, 13))}");
                 }
                 PrintExecutionSummary(pipelineSummaries);
             }

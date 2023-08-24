@@ -51,22 +51,20 @@ public Pipeline Load() =>
 ```
 
 ## Extract Parameters
-An extractor provides additional context to a read connector using extract parameters. An extract parameter is an object of type `ExtractParameter` and is essentially a key-value pair. A collection of `ExtractParameter` objects can be wrapped in an `ExtractParameterCollection`.
+An extractor provides additional context to a read connector using extract parameters. An extract parameter is an object of type `ExtractParameter` which contains a parameter name and value. A collection of `ExtractParameter` objects can be wrapped in an `ExtractParameterCollection`.
 
 If an extractor generates, or is provided with, a collection of one or more `ExtractParameterCollection` objects, it will iterate over them and provide each in a separate invocation of the read connector's query method.
 
-> All extractors accept user-generated extract parameters but they are not guaranteed to forward them. It is the responsibility of the extractor developer to decide whether to provide support for user-generated extract parameters, and if so, how to utilise them.
+> All extractors accept user-generated extract parameters but they are not guaranteed to forward them to the read connector. It is the responsibility of the extractor developer to decide whether to provide support for user-generated extract parameters, and if so, how to utilise them.
 
 ### Inject Extract Parameters
-Users can generate extract parameters and inject them into an extractor to be forwarded on to the read connector.
-
-Pipeline builder supports adding one or more extract parameters by including extractor options with the `IncludeOptions()` extension method and then using `AddParameter()` or `AddParameters`.
+Not all extractors support user-generated extract parameters. The default extractor includes support through the optional `WithDefaultExtractor()` extension method. The built-in cursor and offset pagination extractor extension methods also include overloads to support extract parameters using the same mechanism.
 
 ```csharp
 public Pipeline Load() =>
     _pipelineBuilder
         .ExtractHttp<SourceCustomer>()
-        .IncludeOptions(options => options.AddParameter("AccessToken", GetAccessToken())
+        .WithDefaultExtractor(options => options.AddParameter("AccessToken", GetAccessToken())
         .Transform<Customer>(...)
         .LoadSqlite(targetConnectionString)
         .WithSlowlyChangingDimension();
@@ -85,7 +83,7 @@ During pipeline execution, `GetAccessTokensAsync()` is invoked and generates a l
 public Pipeline Load() =>
     _pipelineBuilder
         .ExtractHttp<SourceCustomer>()
-        .IncludeOptions(options => options.AddParameters(async () => await GetAccessTokensAsync())
+        .WithDefaultExtractor(options => options.AddParameters(async () => await GetAccessTokensAsync())
         .Transform<Customer>(...)
         .LoadSqlite(targetConnectionString)
         .WithSlowlyChangingDimension();

@@ -1,10 +1,10 @@
 ﻿namespace Rowbot.Framework.Pipelines.Options
 {
-    public sealed class LoadOptions
+    public class LoaderOptions
     {
-        public LoadOptions() { }
+        public LoaderOptions() { }
 
-        public LoadOptions(int workerCount)
+        public LoaderOptions(int workerCount)
         {
             WorkerCount = workerCount;
         }

@@ -1,4 +1,5 @@
 ﻿using Rowbot.Framework.Blocks.Loaders;
+using Rowbot.Framework.Pipelines.Options;
 
 namespace Rowbot
 {
@@ -29,6 +30,7 @@ namespace Rowbot
     /// <typeparam name="TTarget">Target entity</typeparam>
     /// <typeparam name="TOptions">Loader options type</typeparam>
     public interface ILoader<TTarget, TOptions> : ILoader<TTarget>
+        where TOptions : LoaderOptions
     {
         /// <summary>
         /// Loader options. Used to provide configuration from pipeline builder to the loader.

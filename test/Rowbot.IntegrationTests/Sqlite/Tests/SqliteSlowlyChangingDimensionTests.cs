@@ -221,7 +221,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                     .ExtractSqlite<SourceCustomer>(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>((source, mapper) => mapper.Apply(source), mapper => Customer.ConfigureMapper(mapper))
                     .LoadSqlite(SqliteTest.ConnectionString)
                     .WithSlowlyChangingDimension();
@@ -239,7 +239,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                         WHERE 
 	                        customer.[IsDeleted] = 0 AND
 	                        source.[CustomerId] IS NULL")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>(
                     (source, mapper) =>
                     {
@@ -279,7 +279,7 @@ namespace Rowbot.IntegrationTests.Sqlite.Tests
                         WHERE 
 	                        customer.[IsDeleted] = 0 AND
 	                        source.[CustomerId] IS NULL")
-                    .IncludeOptions(options => options.BatchSize = 10)
+                    .WithDefaultExtractor(options => options.BatchSize = 10)
                     .Transform<Customer>(
                         (source, mapper) =>
                         {
