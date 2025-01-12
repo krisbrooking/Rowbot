@@ -1,32 +1,25 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Rowbot.Entities;
-using Rowbot.Framework.Blocks.Connectors.Database;
+using Rowbot.Connectors.Common.Database;
+using Rowbot.Connectors.SqlServer.Extensions;
 
 namespace Rowbot.Connectors.SqlServer
 {
-    public class SqlServerReadConnector<TSource> : IReadConnector<TSource, SqlServerReadConnectorOptions<TSource>>
+    public class SqlServerReadConnector<TInput, TOutput>(
+        ILogger<SqlServerReadConnector<TInput, TOutput>> logger,
+        IEntity<TOutput> entity,
+        ISqlCommandProvider<TOutput, SqlServerCommandProvider> sqlCommandProvider) : IReadConnector<TInput, TOutput>
     {
-        private readonly ILogger<SqlServerReadConnector<TSource>> _logger;
-        private readonly IEntity<TSource> _entity;
-        private readonly ISqlCommandProvider<TSource, SqlServerCommandProvider> _sqlCommandProvider;
+        private readonly ILogger<SqlServerReadConnector<TInput, TOutput>> _logger = logger;
+        private readonly IEntity<TOutput> _entity = entity;
+        private readonly ISqlCommandProvider<TOutput, SqlServerCommandProvider> _sqlCommandProvider = sqlCommandProvider;
 
-        public SqlServerReadConnector(
-            ILogger<SqlServerReadConnector<TSource>> logger,
-            IEntity<TSource> entity,
-            ISqlCommandProvider<TSource, SqlServerCommandProvider> sqlCommandProvider)
+        public SqlServerReadConnectorOptions<TOutput> Options { get; set; } = new();
+
+        public async Task<IEnumerable<TOutput>> QueryAsync(ExtractParameter[] parameters)
         {
-            Options = new();
-            _logger = logger;
-            _entity = entity;
-            _sqlCommandProvider = sqlCommandProvider;
-        }
-
-        public SqlServerReadConnectorOptions<TSource> Options { get; set; }
-
-        public async Task<IEnumerable<TSource>> QueryAsync(IEnumerable<ExtractParameter> parameters)
-        {
-            var result = new List<TSource>();
+            var result = new List<TOutput>();
 
             var rows = 0;
             using (var connection = new SqlConnection(Options.ConnectionString))
@@ -41,7 +34,7 @@ namespace Rowbot.Connectors.SqlServer
                     {
                         while (await reader.ReadAsync())
                         {
-                            var rowResult = Activator.CreateInstance<TSource>();
+                            var rowResult = Activator.CreateInstance<TOutput>();
 
                             for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                             {

@@ -1,40 +1,42 @@
-﻿using Rowbot.Connectors.Null;
-using Rowbot.Extractors.CursorPagination;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using Rowbot.Extractors.Framework;
 
-namespace Rowbot
+namespace Rowbot.Extractors.CursorPagination;
+
+public class CursorPaginationExtractor<TInput, TOutput, TCursor> : IExtractor<TInput, TOutput>
 {
-    public class CursorPaginationExtractor<TSource> : IExtractor<TSource, CursorPaginationExtractorOptions<TSource>>
+    public IReadConnector<TInput, TOutput>? Connector { get; set; }
+    public CursorPaginationOptions<TOutput, TCursor> Options { get; set; } = new();
+
+    public async IAsyncEnumerable<TOutput> ExtractAsync(ExtractContext<TInput> context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        public CursorPaginationExtractor()
+        if (Connector is null)
         {
-            Options = new();
-            Connector = new NullReadConnector<TSource>();
+            throw new InvalidOperationException("Read connector is not configured");
         }
+            
+        var dataPager = new CursorDataPager<TOutput, TCursor>(Options.Cursor, Options.InitialValue, Options.OrderBy);
 
-        public CursorPaginationExtractorOptions<TSource> Options { get; set; }
-        public IReadConnector<TSource> Connector { get; set; }
+        var dataPagerParameters = dataPager.Next();
 
-        public async IAsyncEnumerable<TSource> ExtractAsync(ExtractParameterCollection userDefinedParameters, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        while (!dataPager.IsEndOfQuery && !cancellationToken.IsCancellationRequested)
         {
-            var dataPager = Options.DataPagerFactory();
+            var queryResult = await Connector.QueryAsync([..context.GetParameters(), ..dataPagerParameters]);
 
-            var dataPagerParameters = dataPager.Next();
-
-            while (!dataPager.IsEndOfQuery && !cancellationToken.IsCancellationRequested)
+            foreach (var item in queryResult)
             {
-                var extractParameters = dataPagerParameters.Concat(userDefinedParameters);
-
-                var queryResult = await Connector!.QueryAsync(extractParameters);
-
-                foreach (var item in queryResult)
-                {
-                    dataPager.AddResults(item);
-                    yield return item;
-                }
-
-                dataPagerParameters = dataPager.Next();
+                dataPager.AddResults(item);
+                yield return item;
             }
+
+            var nextDataPagerParameters = dataPager.Next();
+
+            if (nextDataPagerParameters.SequenceEqual(dataPagerParameters))
+            {
+                throw new InvalidOperationException("Data pager parameters have not changed since the last iteration");
+            }
+                
+            dataPagerParameters = nextDataPagerParameters;
         }
     }
 }

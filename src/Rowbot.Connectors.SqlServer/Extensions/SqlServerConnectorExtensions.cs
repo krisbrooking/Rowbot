@@ -1,50 +1,54 @@
-﻿using Rowbot.Connectors.SqlServer;
+﻿using Rowbot.Entities;
+using Rowbot.Pipelines.Tasks;
 
-namespace Rowbot
+namespace Rowbot.Connectors.SqlServer
 {
     public static class SqlServerConnectorExtensions
     {
         /// <summary>
         /// Extracts data from a MS SQL Server database using a query.
         /// </summary>
-        public static IPipelineExtractor<TSource> ExtractSqlServer<TSource>(this IPipelineBuilder pipelineBuilder, string connectionString, string query, Action<SqlServerReadConnectorOptions<TSource>>? configure = default)
+        public static IExtractBuilderConnectorStep<TInput, TOutput> FromSqlServer<TInput, TOutput>(
+            this IExtractBuilder<TInput, TOutput> builder, 
+            string connectionString, 
+            string query, 
+            Action<SqlServerReadConnectorOptions<TOutput>>? configure = null)
         {
-            var options = new SqlServerReadConnectorOptions<TSource>();
+            var options = new SqlServerReadConnectorOptions<TOutput>();
             options.ConnectionString = connectionString;
             options.Query = query;
             configure?.Invoke(options);
 
-            return pipelineBuilder.Extract<SqlServerReadConnector<TSource>, TSource, SqlServerReadConnectorOptions<TSource>>(options);
+            return builder.WithConnector<SqlServerReadConnector<TInput, TOutput>>(connector => connector.Options = options);
         }
 
         /// <summary>
-        /// Loads data to a MS SQL Server table.
+        /// Loads data to a MS SQL Server database table.
         /// </summary>
-        public static IPipelineLoader<TTarget> LoadSqlServer<TSource, TTarget>(this IPipelineTransformer<TSource, TTarget> pipelineTransformer, string connectionString, Action<SqlServerWriteConnectorOptions<TTarget>>? configure = default)
+        public static ILoadBuilderConnectorStep<TInput, SqlServerWriteConnector<TInput>> ToSqlServer<TInput>(
+            this ILoadBuilder<TInput> builder, 
+            string connectionString, 
+            Action<SqlServerWriteConnectorOptions<TInput>>? configure = null)
         {
-            var options = new SqlServerWriteConnectorOptions<TTarget>();
+            var options = new SqlServerWriteConnectorOptions<TInput>();
             options.ConnectionString = connectionString;
             configure?.Invoke(options);
 
-            var pipelineLoader = pipelineTransformer.Load<SqlServerWriteConnector<TTarget>, TTarget, SqlServerWriteConnectorOptions<TTarget>>(options);
+            return builder.WithConnector<SqlServerWriteConnector<TInput>>(connector => connector.Options = options);
+        }
 
-            foreach (var pipelineCommand in options.PipelineCommands)
+        /// <summary>
+        /// Truncates a MS SQL Server database table
+        /// </summary>
+        public static ILoadBuilderConnectorStep<TInput, SqlServerWriteConnector<TInput>> TruncateTable<TInput>(
+            this ILoadBuilderConnectorStep<TInput, SqlServerWriteConnector<TInput>> connectorStep)
+        {
+            var entity = new Entity<TInput>();
+            
+            return connectorStep.WithTask(async connector =>
             {
-                if (pipelineLoader is ICustomPipelineLoader<TTarget> customLoader)
-                {
-                    var writeConnector = customLoader.WriteConnectorFactory() as SqlServerWriteConnector<TTarget>;
-                    if (writeConnector is { })
-                    {
-                        customLoader.AddPipelineBlock(async () =>
-                        {
-                            await writeConnector.ExecuteCommandAsync(pipelineCommand.Command);
-                        },
-                        pipelineCommand.Priority);
-                    }
-                }
-            }
-
-            return pipelineLoader;
+                await connector.ExecuteCommandAsync($"TRUNCATE TABLE {entity.Descriptor.Value.TableName}");
+            }, "Truncate Table", TaskExecutionOrder.PrePipeline, TaskPriority.High);
         }
     }
 }

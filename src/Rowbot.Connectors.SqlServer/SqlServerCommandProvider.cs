@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using Rowbot.Entities;
-using Rowbot.Framework.Blocks.Connectors.Database;
+using Rowbot.Connectors.Common.Database;
 using System.Data;
 
 namespace Rowbot.Connectors.SqlServer

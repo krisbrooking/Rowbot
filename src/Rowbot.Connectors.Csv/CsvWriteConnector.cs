@@ -2,36 +2,31 @@
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
 using Rowbot.Entities;
-using Rowbot.Framework.Blocks.Connectors.Find;
-using Rowbot.Framework.Blocks.Connectors.Synchronisation;
+using Rowbot.Connectors.Common.Find;
+using Rowbot.Connectors.Common.Synchronisation;
 using System.Globalization;
 
 namespace Rowbot.Connectors.Csv
 {
-    public sealed class CsvWriteConnector<TEntity> : IWriteConnector<TEntity, CsvConnectorOptions<TEntity>>
+    public sealed class CsvWriteConnector<TInput>(
+        IEntity<TInput> entity, 
+        ILogger<CsvWriteConnector<TInput>> logger, 
+        IFinderProvider finderProvider, 
+        ISharedLockManager sharedLockManager) : IWriteConnector<TInput>
     {
-        private readonly IEntity<TEntity> _entity;
-        private readonly ILogger<CsvWriteConnector<TEntity>> _logger;
-        private readonly IFinderProvider _finderProvider;
-        private readonly ISharedLockManager _sharedLockManager;
+        private readonly IEntity<TInput> _entity = entity;
+        private readonly ILogger<CsvWriteConnector<TInput>> _logger = logger;
+        private readonly IFinderProvider _finderProvider = finderProvider;
+        private readonly ISharedLockManager _sharedLockManager = sharedLockManager;
 
-        public CsvWriteConnector(IEntity<TEntity> entity, ILogger<CsvWriteConnector<TEntity>> logger, IFinderProvider finderProvider, ISharedLockManager sharedLockManager)
+        public CsvConnectorOptions<TInput> Options { get; set; } = new();
+
+        public async Task<IEnumerable<TInput>> FindAsync(
+            IEnumerable<TInput> findEntities, 
+            Action<IFieldSelector<TInput>> compareFieldsSelector, 
+            Action<IFieldSelector<TInput>> resultFieldsSelector)
         {
-            Options = new();
-            _logger = logger;
-            _entity = entity;
-            _finderProvider = finderProvider;
-            _sharedLockManager = sharedLockManager;
-        }
-
-        public CsvConnectorOptions<TEntity> Options { get; set; }
-
-        public async Task<IEnumerable<TEntity>> FindAsync(
-            IEnumerable<TEntity> findEntities, 
-            Action<IFieldSelector<TEntity>> compareFieldsSelector, 
-            Action<IFieldSelector<TEntity>> resultFieldsSelector)
-        {
-            var result = new List<TEntity>();
+            var result = new List<TInput>();
             var finder = _finderProvider.CreateFinder(compareFieldsSelector, resultFieldsSelector, _entity.Comparer.Value);
 
             using (_sharedLockManager.GetSharedReadLock(Options.FilePath))
@@ -45,7 +40,7 @@ namespace Rowbot.Connectors.Csv
                 }
                 while (await csv.ReadAsync())
                 {
-                    var record = csv.GetRecord<TEntity>();
+                    var record = csv.GetRecord<TInput>();
                     if (findEntities.Any(x => finder.Compare(record, x)))
                     {
                         result.Add(finder.Return(record));
@@ -56,23 +51,23 @@ namespace Rowbot.Connectors.Csv
             return result;
         }
 
-        public async Task<int> InsertAsync(IEnumerable<TEntity> data)
+        public async Task<int> InsertAsync(IEnumerable<TInput> data)
         {
             var configuration = new CsvConfiguration(CultureInfo.InvariantCulture);
 
-            var classMap = new DefaultClassMap<TEntity>();
+            var classMap = new DefaultClassMap<TInput>();
             classMap.AutoMap(CultureInfo.InvariantCulture);
 
             foreach (var fieldDescriptor in _entity.Descriptor.Value.IgnoredFields)
             {
-                classMap.Map(typeof(TEntity), fieldDescriptor.Property).Ignore();
+                classMap.Map(typeof(TInput), fieldDescriptor.Property).Ignore();
             }
 
             foreach (var fieldDescriptor in _entity.Descriptor.Value.Fields)
             {
                 if (!string.Equals(fieldDescriptor.Name, fieldDescriptor.Property.Name, StringComparison.OrdinalIgnoreCase))
                 {
-                    classMap.Map(typeof(TEntity), fieldDescriptor.Property).Name(fieldDescriptor.Name);
+                    classMap.Map(typeof(TInput), fieldDescriptor.Property).Name(fieldDescriptor.Name);
                 }
             }
 
@@ -87,7 +82,7 @@ namespace Rowbot.Connectors.Csv
             }
         }
 
-        public Task<int> UpdateAsync(IEnumerable<Update<TEntity>> data)
+        public Task<int> UpdateAsync(IEnumerable<RowUpdate<TInput>> data)
         {
             return InsertAsync(data.Select(x => x.Row));
         }

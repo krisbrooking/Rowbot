@@ -1,17 +1,13 @@
-﻿namespace Rowbot.Connectors.List
+﻿namespace Rowbot.Connectors.List;
+
+public sealed class ListReadConnector<TInput, TOutput> : IReadConnector<TInput, TOutput>
 {
-    public sealed class ListReadConnector<TSource> : IReadConnector<TSource, ListConnectorOptions<TSource>>
+    public ListReadConnectorOptions<TOutput> Options { get; set; } = new();
+
+    public Task<IEnumerable<TOutput>> QueryAsync(ExtractParameter[] parameters)
     {
-        public ListReadConnector()
-        {
-            Options = new();
-        }
-
-        public ListConnectorOptions<TSource> Options { get; set; }
-
-        public Task<IEnumerable<TSource>> QueryAsync(IEnumerable<ExtractParameter> parameters)
-        {
-            return Task.FromResult(Options.Data.AsEnumerable());
-        }
+        var data = Options.Query(parameters);
+            
+        return Task.FromResult(data);
     }
 }

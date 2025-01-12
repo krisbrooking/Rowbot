@@ -2,7 +2,7 @@
 
 namespace Rowbot.Connectors.Csv
 {
-    public sealed class CsvConnectorOptions<TSource>
+    public sealed class CsvConnectorOptions<TEntity>
     {
         internal void SetFilePath(string filePath)
         {
@@ -20,7 +20,7 @@ namespace Rowbot.Connectors.Csv
 
         internal string FilePath { get; set; } = string.Empty;
         public bool HasHeaderRow { get; set; }
-        public Expression<Func<TSource, bool>>? FilterExpression { get; set; }
+        public Expression<Func<TEntity, bool>>? FilterExpression { get; set; }
         internal string? FilterDescription => FilterExpression?.ToString();
     }
 }

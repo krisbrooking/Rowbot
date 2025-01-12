@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System.Linq;
 
 namespace Rowbot.UnitTests.Connectors.DataTable
 {
@@ -7,14 +6,14 @@ namespace Rowbot.UnitTests.Connectors.DataTable
     {
         public static IServiceCollection AddDataTableConnector(this IServiceCollection services)
         {
-            if (!services.Any(x => x.ServiceType == typeof(IDataTableReadConnector<>)))
+            if (!services.Any(x => x.ServiceType == typeof(DataTableReadConnector<,>)))
             {
-                services.AddTransient(typeof(IDataTableReadConnector<>), typeof(DataTableReadConnector<>));
+                services.AddTransient(typeof(DataTableReadConnector<,>), typeof(DataTableReadConnector<,>));
             }
 
-            if (!services.Any(x => x.ServiceType == typeof(IDataTableWriteConnector<>)))
+            if (!services.Any(x => x.ServiceType == typeof(DataTableWriteConnector<>)))
             {
-                services.AddTransient(typeof(IDataTableWriteConnector<>), typeof(DataTableWriteConnector<>));
+                services.AddTransient(typeof(DataTableWriteConnector<>), typeof(DataTableWriteConnector<>));
             }
 
             return services;

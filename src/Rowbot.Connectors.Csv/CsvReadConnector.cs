@@ -1,27 +1,22 @@
 ﻿using CsvHelper;
 using Microsoft.Extensions.Logging;
-using Rowbot.Framework.Blocks.Connectors.Synchronisation;
+using Rowbot.Connectors.Common.Synchronisation;
 using System.Globalization;
 
 namespace Rowbot.Connectors.Csv
 {
-    public sealed class CsvReadConnector<TSource> : IReadConnector<TSource, CsvConnectorOptions<TSource>>
+    public sealed class CsvReadConnector<TInput, TOutput>(
+        ILogger<CsvReadConnector<TInput, TOutput>> logger, 
+        ISharedLockManager sharedLockManager) : IReadConnector<TInput, TOutput>
     {
-        private readonly ILogger<CsvReadConnector<TSource>> _logger;
-        private readonly ISharedLockManager _sharedLockManager;
+        private readonly ILogger<CsvReadConnector<TInput, TOutput>> _logger = logger;
+        private readonly ISharedLockManager _sharedLockManager = sharedLockManager;
 
-        public CsvReadConnector(ILogger<CsvReadConnector<TSource>> logger, ISharedLockManager sharedLockManager)
+        public CsvConnectorOptions<TOutput> Options { get; set; } = new();
+
+        public async Task<IEnumerable<TOutput>> QueryAsync(ExtractParameter[] parameters)
         {
-            Options = new();
-            _logger = logger;
-            _sharedLockManager = sharedLockManager;
-        }
-
-        public CsvConnectorOptions<TSource> Options { get; set; }
-
-        public async Task<IEnumerable<TSource>> QueryAsync(IEnumerable<ExtractParameter> parameters)
-        {
-            var result = new List<TSource>();
+            var result = new List<TOutput>();
             var filter = Options.FilterExpression?.Compile();
             if (filter != null)
             {
@@ -39,7 +34,7 @@ namespace Rowbot.Connectors.Csv
                 }
                 while (await csv.ReadAsync())
                 {
-                    var record = csv.GetRecord<TSource>();
+                    var record = csv.GetRecord<TOutput>();
                     if (filter is null || filter(record))
                     {
                         result.Add(record);

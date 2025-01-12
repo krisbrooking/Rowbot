@@ -2,32 +2,24 @@
 using Microsoft.Extensions.Logging;
 using Rowbot.Connectors.Sqlite.Extensions;
 using Rowbot.Entities;
-using Rowbot.Framework.Blocks.Connectors.Database;
+using Rowbot.Connectors.Common.Database;
 
 namespace Rowbot.Connectors.Sqlite
 {
-    public class SqliteReadConnector<TSource> : IReadConnector<TSource, SqliteReadConnectorOptions<TSource>>
+    public class SqliteReadConnector<TInput, TOutput>(
+        ILogger<SqliteReadConnector<TInput, TOutput>> logger,
+        IEntity<TOutput> entity, 
+        ISqlCommandProvider<TOutput, SqliteCommandProvider> sqlCommandProvider) : IReadConnector<TInput, TOutput>
     {
-        private readonly ILogger<SqliteReadConnector<TSource>> _logger;
-        protected readonly IEntity<TSource> _entity;
-        protected readonly ISqlCommandProvider<TSource, SqliteCommandProvider> _sqlCommandProvider;
+        private readonly ILogger<SqliteReadConnector<TInput, TOutput>> _logger = logger;
+        private readonly IEntity<TOutput> _entity = entity;
+        private readonly ISqlCommandProvider<TOutput, SqliteCommandProvider> _sqlCommandProvider = sqlCommandProvider;
 
-        public SqliteReadConnector(
-            ILogger<SqliteReadConnector<TSource>> logger,
-            IEntity<TSource> entity, 
-            ISqlCommandProvider<TSource, SqliteCommandProvider> sqlCommandProvider)
+        public SqliteReadConnectorOptions<TOutput> Options { get; set; } = new();
+
+        public async Task<IEnumerable<TOutput>> QueryAsync(ExtractParameter[] parameters)
         {
-            Options = new();
-            _logger = logger;
-            _entity = entity;
-            _sqlCommandProvider = sqlCommandProvider;
-        }
-
-        public SqliteReadConnectorOptions<TSource> Options { get; set; }
-
-        public async Task<IEnumerable<TSource>> QueryAsync(IEnumerable<ExtractParameter> parameters)
-        {
-            var result = new List<TSource>();
+            var result = new List<TOutput>();
 
             var rows = 0;
             using (var connection = new SqliteConnection(Options.ConnectionString))
@@ -42,7 +34,7 @@ namespace Rowbot.Connectors.Sqlite
                     {
                         while (await reader.ReadAsync())
                         {
-                            var rowResult = Activator.CreateInstance<TSource>();
+                            var rowResult = Activator.CreateInstance<TOutput>();
 
                             for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                             {

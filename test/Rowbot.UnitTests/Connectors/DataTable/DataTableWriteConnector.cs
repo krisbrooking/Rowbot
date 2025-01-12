@@ -1,41 +1,33 @@
 ﻿using Rowbot.Entities;
-using Rowbot.Framework.Blocks.Connectors.Find;
-using Rowbot.Framework.Blocks.Connectors.Synchronisation;
-using System;
-using System.Collections.Generic;
+using Rowbot.Connectors.Common.Find;
+using Rowbot.Connectors.Common.Synchronisation;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading.Tasks;
 
 namespace Rowbot.UnitTests.Connectors.DataTable
 {
-    public interface IDataTableWriteConnector<TTarget> : IWriteConnector<TTarget, DataTableConnectorOptions<TTarget>> { }
-
-    public sealed class DataTableWriteConnector<TTarget> : IDataTableWriteConnector<TTarget>
+    public sealed class DataTableWriteConnector<TInput> : IWriteConnector<TInput>
     {
-        private readonly IEntity<TTarget> _entity;
+        private readonly IEntity<TInput> _entity;
         private readonly ISharedLockManager _sharedLockManager;
         private readonly IFinderProvider _finderProvider;
+        private readonly Dictionary<string, Action<DataRow, TInput>> _dataRowValueAssigningActions;
         private System.Data.DataTable? _dataTable;
-        public Dictionary<string, Action<DataRow, TTarget>> _dataRowValueAssigningActions;
 
-        public DataTableWriteConnector(IEntity<TTarget> entity, ISharedLockManager sharedLockManager, IFinderProvider finderProvider)
+        public DataTableWriteConnector(IEntity<TInput> entity, ISharedLockManager sharedLockManager, IFinderProvider finderProvider)
         {
-            Options = new();
             _entity = entity;
             _sharedLockManager = sharedLockManager;
             _finderProvider = finderProvider;
 
             var dataRowIndexer = typeof(DataRow)
                 .GetProperties()
-                .Where(x =>
+                .First(x =>
                     x.Name == "Item" &&
                     x.GetIndexParameters().Length == 1 &&
-                    x.GetIndexParameters()[0].ParameterType == typeof(string))
-                .First();
+                    x.GetIndexParameters()[0].ParameterType == typeof(string));
 
             _dataRowValueAssigningActions = entity.Descriptor.Value.Fields
                 .Where(x => x.DatabaseGeneratedOption != DatabaseGeneratedOption.Identity)
@@ -43,14 +35,14 @@ namespace Rowbot.UnitTests.Connectors.DataTable
                 .ToDictionary(x => x.Field, x => x.Mapper);
         }
 
-        public DataTableConnectorOptions<TTarget> Options { get; set; }
+        public DataTableConnectorOptions<TInput> Options { get; set; } = new();
 
-        public Task<IEnumerable<TTarget>> FindAsync(
-            IEnumerable<TTarget> findEntities,
-            Action<IFieldSelector<TTarget>> compareFieldSelector,
-            Action<IFieldSelector<TTarget>> resultFieldSelector)
+        public Task<IEnumerable<TInput>> FindAsync(
+            IEnumerable<TInput> findEntities,
+            Action<IFieldSelector<TInput>> compareFieldSelector,
+            Action<IFieldSelector<TInput>> resultFieldSelector)
         {
-            var results = new List<TTarget>();
+            var results = new List<TInput>();
 
             _dataTable = DataTableProvider.Instance.GetSharedDataTable(_entity.Descriptor.Value.TableName);
 
@@ -59,7 +51,7 @@ namespace Rowbot.UnitTests.Connectors.DataTable
 
             foreach (DataRow row in rows)
             {
-                var findResult = Activator.CreateInstance<TTarget>();
+                var findResult = Activator.CreateInstance<TInput>();
 
                 foreach (DataColumn column in _dataTable.Columns)
                 {
@@ -80,7 +72,7 @@ namespace Rowbot.UnitTests.Connectors.DataTable
             return Task.FromResult(results.AsEnumerable());
         }
 
-        public Task<int> InsertAsync(IEnumerable<TTarget> data)
+        public Task<int> InsertAsync(IEnumerable<TInput> data)
         {
             _dataTable = DataTableProvider.Instance.GetSharedDataTable(_entity.Descriptor.Value.TableName);
             using (_sharedLockManager.GetSharedWriteLock(_entity.Descriptor.Value.TableName))
@@ -104,7 +96,7 @@ namespace Rowbot.UnitTests.Connectors.DataTable
             }
         }
 
-        public Task<int> UpdateAsync(IEnumerable<Update<TTarget>> data)
+        public Task<int> UpdateAsync(IEnumerable<RowUpdate<TInput>> data)
         {
             return Task.FromResult(0);
         }
@@ -136,9 +128,9 @@ namespace Rowbot.UnitTests.Connectors.DataTable
             return true;
         }
 
-        private Expression<Action<DataRow, TTarget>> GetDataRowValueAssigningExpression(FieldDescriptor field, PropertyInfo dataRowIndexer)
+        private Expression<Action<DataRow, TInput>> GetDataRowValueAssigningExpression(FieldDescriptor field, PropertyInfo dataRowIndexer)
         {
-            var sourceType = typeof(TTarget);
+            var sourceType = typeof(TInput);
             var sourceTypeParameter = Expression.Parameter(sourceType);
 
             var dataRowType = typeof(DataRow);
@@ -152,13 +144,13 @@ namespace Rowbot.UnitTests.Connectors.DataTable
                 var isNullCondition = Expression.Condition(valueEqualsNull, dbNullValue, Expression.Convert(Expression.MakeMemberAccess(sourceTypeParameter, field.Property), typeof(object)));
 
                 var body = Expression.Assign(dataRowSetter, isNullCondition);
-                var lambda = Expression.Lambda<Action<DataRow, TTarget>>(body, dataRowTypeParameter, sourceTypeParameter);
+                var lambda = Expression.Lambda<Action<DataRow, TInput>>(body, dataRowTypeParameter, sourceTypeParameter);
                 return lambda;
             }
             else
             {
                 var body = Expression.Assign(dataRowSetter, Expression.Convert(Expression.MakeMemberAccess(sourceTypeParameter, field.Property), typeof(object)));
-                var lambda = Expression.Lambda<Action<DataRow, TTarget>>(body, dataRowTypeParameter, sourceTypeParameter);
+                var lambda = Expression.Lambda<Action<DataRow, TInput>>(body, dataRowTypeParameter, sourceTypeParameter);
                 return lambda;
             }
         }

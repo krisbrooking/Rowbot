@@ -2,37 +2,29 @@
 using Microsoft.Extensions.Logging;
 using Rowbot.Connectors.Sqlite.Extensions;
 using Rowbot.Entities;
-using Rowbot.Framework.Blocks.Connectors.Database;
+using Rowbot.Connectors.Common.Database;
 
 namespace Rowbot.Connectors.Sqlite
 {
-    public class SqliteWriteConnector<TTarget> : IWriteConnector<TTarget, SqliteWriteConnectorOptions<TTarget>>, ISchemaConnector
+    public class SqliteWriteConnector<TInput>(
+        ILogger<SqliteWriteConnector<TInput>> logger,
+        IEntity<TInput> entity,
+        ISqlCommandProvider<TInput, SqliteCommandProvider> sqlCommandProvider) : IWriteConnector<TInput>, ICreateConnector
     {
-        private readonly ILogger<SqliteWriteConnector<TTarget>> _logger;
-        protected readonly IEntity<TTarget> _entity;
-        protected readonly ISqlCommandProvider<TTarget, SqliteCommandProvider> _sqlCommandProvider;
+        private readonly ILogger<SqliteWriteConnector<TInput>> _logger = logger;
+        private readonly IEntity<TInput> _entity = entity;
+        private readonly ISqlCommandProvider<TInput, SqliteCommandProvider> _sqlCommandProvider = sqlCommandProvider;
 
-        public SqliteWriteConnector(
-            ILogger<SqliteWriteConnector<TTarget>> logger,
-            IEntity<TTarget> entity,
-            ISqlCommandProvider<TTarget, SqliteCommandProvider> sqlCommandProvider)
+        public SqliteConnectorOptions? Options { get; set; }
+
+        public async Task<IEnumerable<TInput>> FindAsync(
+            IEnumerable<TInput> findEntities,
+            Action<IFieldSelector<TInput>> compareFieldSelector,
+            Action<IFieldSelector<TInput>> resultFieldSelector)
         {
-            Options = new();
-            _logger = logger;
-            _entity = entity;
-            _sqlCommandProvider = sqlCommandProvider;
-        }
+            var result = new List<TInput>();
 
-        public SqliteWriteConnectorOptions<TTarget> Options { get; set; }
-
-        public async Task<IEnumerable<TTarget>> FindAsync(
-            IEnumerable<TTarget> findEntities,
-            Action<IFieldSelector<TTarget>> compareFieldSelector,
-            Action<IFieldSelector<TTarget>> resultFieldSelector)
-        {
-            var result = new List<TTarget>();
-
-            using (var connection = new SqliteConnection(Options.ConnectionString))
+            using (var connection = new SqliteConnection(Options?.ConnectionString))
             {
                 await connection.OpenAsync();
 
@@ -43,7 +35,7 @@ namespace Rowbot.Connectors.Sqlite
                     {
                         while (await reader.ReadAsync())
                         {
-                            var findResult = Activator.CreateInstance<TTarget>();
+                            var findResult = Activator.CreateInstance<TInput>();
 
                             for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                             {
@@ -68,11 +60,11 @@ namespace Rowbot.Connectors.Sqlite
             return result;
         }
 
-        public async Task<int> InsertAsync(IEnumerable<TTarget> data)
+        public async Task<int> InsertAsync(IEnumerable<TInput> data)
         {
             int rowsChanged = 0;
 
-            using (var connection = new SqliteConnection(Options.ConnectionString))
+            using (var connection = new SqliteConnection(Options?.ConnectionString))
             {
                 await connection.OpenAsync();
 
@@ -98,11 +90,11 @@ namespace Rowbot.Connectors.Sqlite
             return rowsChanged;
         }
 
-        public async Task<int> UpdateAsync(IEnumerable<Update<TTarget>> data)
+        public async Task<int> UpdateAsync(IEnumerable<RowUpdate<TInput>> data)
         {
             int rowsChanged = 0;
 
-            using (var connection = new SqliteConnection(Options.ConnectionString))
+            using (var connection = new SqliteConnection(Options?.ConnectionString))
             {
                 await connection.OpenAsync();
 
@@ -126,23 +118,13 @@ namespace Rowbot.Connectors.Sqlite
         {
             int rowsChanged = 0;
 
-            using (SqliteConnection connection = new SqliteConnection(Options.ConnectionString))
+            using (SqliteConnection connection = new SqliteConnection(Options?.ConnectionString))
             {
                 await connection.OpenAsync();
 
-                if (Options.TruncateTable)
-                {
-                    using (SqliteCommand truncateCommand = (SqliteCommand)_sqlCommandProvider.GetTruncateDataSetCommand())
-                    {
-                        _logger.LogCommand(truncateCommand);
-                        truncateCommand.Connection = connection;
-                        rowsChanged += await truncateCommand.ExecuteNonQueryAsync();
-                    }
-                }
-
                 using (SqliteCommand createCommand = (SqliteCommand)_sqlCommandProvider.GetCreateDataSetCommand())
                 {
-                    createCommand.CommandText = CreateDataSetCommandText(createCommand.CommandText);
+                    createCommand.CommandText = createCommand.CommandText.Replace("AS IDENTITY", "");
                     _logger.LogCommand(createCommand);
                     createCommand.Connection = connection;
                     rowsChanged += await createCommand.ExecuteNonQueryAsync();
@@ -154,18 +136,11 @@ namespace Rowbot.Connectors.Sqlite
             return rowsChanged > 0;
         }
 
-        internal string CreateDataSetCommandText(string commandText)
-        {
-            commandText = commandText.Replace("AS IDENTITY", "");
-
-            return commandText;
-        }
-
-        internal async Task<bool> ExecuteCommandAsync(string commandText)
+        public async Task<bool> ExecuteCommandAsync(string commandText)
         {
             int rowsChanged = 0;
 
-            using (SqliteConnection connection = new SqliteConnection(Options.ConnectionString))
+            using (SqliteConnection connection = new SqliteConnection(Options?.ConnectionString))
             {
                 await connection.OpenAsync();
 

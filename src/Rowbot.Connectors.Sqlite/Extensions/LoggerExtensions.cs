@@ -4,12 +4,12 @@ using System.Text.RegularExpressions;
 
 namespace Rowbot.Connectors.Sqlite.Extensions
 {
-    public static class LoggerExtensions
+    internal static class LoggerExtensions
     {
-        public static void LogQuery<TSource>(this ILogger<SqliteReadConnector<TSource>> logger, IDbCommand command)
+        public static void LogQuery<TInput, TOutput>(this ILogger<SqliteReadConnector<TInput, TOutput>> logger, IDbCommand command)
             => logger.LogQueryOrCommand(command);
 
-        public static void LogCommand<TTarget>(this ILogger<SqliteWriteConnector<TTarget>> logger, IDbCommand command)
+        public static void LogCommand<TInput>(this ILogger<SqliteWriteConnector<TInput>> logger, IDbCommand command)
             => logger.LogQueryOrCommand(command);
 
         private static void LogQueryOrCommand(this ILogger logger, IDbCommand command)

@@ -2,18 +2,24 @@
 {
     public static class DataTableConnectorExtensions
     {
-        public static IPipelineExtractor<TSource> ExtractDataTable<TSource>(this IPipelineBuilder pipelineBuilder)
+        public static IExtractBuilderConnectorStep<TInput, TOutput> ExtractDataTable<TInput, TOutput>(
+            this IExtractBuilder<TInput, TOutput> builder,
+            Action<DataTableConnectorOptions<TOutput>>? configure = null)
         {
-            var options = new DataTableConnectorOptions<TSource>();
+            var options = new DataTableConnectorOptions<TOutput>();
+            configure?.Invoke(options);
 
-            return pipelineBuilder.Extract<IDataTableReadConnector<TSource>, TSource, DataTableConnectorOptions<TSource>>(options);
+            return builder.WithConnector<DataTableReadConnector<TInput, TOutput>>(extractor => extractor.Options = options);
         }
 
-        public static IPipelineLoader<TTarget> LoadDataTable<TSource, TTarget>(this IPipelineTransformer<TSource, TTarget> pipelineTransformer)
+        public static ILoadBuilderConnectorStep<TInput, DataTableWriteConnector<TInput>> LoadDataTable<TInput>(
+            this ILoadBuilder<TInput> builder,
+            Action<DataTableConnectorOptions<TInput>>? configure = null)
         {
-            var options = new DataTableConnectorOptions<TTarget>();
+            var options = new DataTableConnectorOptions<TInput>();
+            configure?.Invoke(options);
 
-            return pipelineTransformer.Load<IDataTableWriteConnector<TTarget>, TTarget, DataTableConnectorOptions<TTarget>>(options);
+            return builder.WithConnector<DataTableWriteConnector<TInput>>(loader => loader.Options = options);
         }
     }
 }

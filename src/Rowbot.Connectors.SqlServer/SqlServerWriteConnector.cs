@@ -1,39 +1,38 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Rowbot.Entities;
-using Rowbot.Framework.Blocks.Connectors.Database;
+using Rowbot.Connectors.Common.Database;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Transactions;
+using Rowbot.Connectors.SqlServer.Extensions;
 
 namespace Rowbot.Connectors.SqlServer
 {
-    public class SqlServerWriteConnector<TTarget> : IWriteConnector<TTarget, SqlServerWriteConnectorOptions<TTarget>>, ISchemaConnector
+    public class SqlServerWriteConnector<TInput> : IWriteConnector<TInput>, ICreateConnector
     {
-        private readonly ILogger<SqlServerWriteConnector<TTarget>> _logger;
-        private readonly IEntity<TTarget> _entity;
-        private readonly ISqlCommandProvider<TTarget, SqlServerCommandProvider> _sqlCommandProvider;
-        private Dictionary<string, Action<DataRow, TTarget>> _dataRowValueAssigningActions;
+        private readonly ILogger<SqlServerWriteConnector<TInput>> _logger;
+        private readonly IEntity<TInput> _entity;
+        private readonly ISqlCommandProvider<TInput, SqlServerCommandProvider> _sqlCommandProvider;
+        private Dictionary<string, Action<DataRow, TInput>> _dataRowValueAssigningActions;
 
         public SqlServerWriteConnector(
-            ILogger<SqlServerWriteConnector<TTarget>> logger,
-            IEntity<TTarget> entity,
-            ISqlCommandProvider<TTarget, SqlServerCommandProvider> sqlCommandProvider)
+            ILogger<SqlServerWriteConnector<TInput>> logger,
+            IEntity<TInput> entity,
+            ISqlCommandProvider<TInput, SqlServerCommandProvider> sqlCommandProvider)
         {
-            Options = new();
             _logger = logger;
             _entity = entity;
             _sqlCommandProvider = sqlCommandProvider;
 
             var dataRowIndexer = typeof(DataRow)
                 .GetProperties()
-                .Where(x =>
+                .First(x =>
                     x.Name == "Item" &&
                     x.GetIndexParameters().Length == 1 &&
-                    x.GetIndexParameters()[0].ParameterType == typeof(string))
-                .First();
+                    x.GetIndexParameters()[0].ParameterType == typeof(string));
 
             _dataRowValueAssigningActions = entity.Descriptor.Value.Fields
                 .Where(x => x.DatabaseGeneratedOption != DatabaseGeneratedOption.Identity)
@@ -41,14 +40,14 @@ namespace Rowbot.Connectors.SqlServer
                 .ToDictionary(x => x.Field, x => x.Mapper);
         }
 
-        public SqlServerWriteConnectorOptions<TTarget> Options { get; set; }
+        public SqlServerWriteConnectorOptions<TInput> Options { get; set; } = new();
 
-        public async Task<IEnumerable<TTarget>> FindAsync(
-            IEnumerable<TTarget> findEntities,
-            Action<IFieldSelector<TTarget>> compareFieldSelector,
-            Action<IFieldSelector<TTarget>> resultFieldSelector)
+        public async Task<IEnumerable<TInput>> FindAsync(
+            IEnumerable<TInput> findEntities,
+            Action<IFieldSelector<TInput>> compareFieldSelector,
+            Action<IFieldSelector<TInput>> resultFieldSelector)
         {
-            var result = new List<TTarget>();
+            var result = new List<TInput>();
 
             using (SqlConnection connection = new SqlConnection(Options.ConnectionString))
             {
@@ -61,7 +60,7 @@ namespace Rowbot.Connectors.SqlServer
                     {
                         while (await reader.ReadAsync())
                         {
-                            var findResult = Activator.CreateInstance<TTarget>();
+                            var findResult = Activator.CreateInstance<TInput>();
 
                             for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                             {
@@ -81,7 +80,7 @@ namespace Rowbot.Connectors.SqlServer
             return result;
         }
 
-        public async Task<int> InsertAsync(IEnumerable<TTarget> data)
+        public async Task<int> InsertAsync(IEnumerable<TInput> data)
         {
             int rowsChanged = 0;
 
@@ -139,7 +138,7 @@ namespace Rowbot.Connectors.SqlServer
             return rowsChanged;
         }
 
-        public async Task<int> UpdateAsync(IEnumerable<Update<TTarget>> data)
+        public async Task<int> UpdateAsync(IEnumerable<RowUpdate<TInput>> data)
         {
             int rowsChanged = 0;
 
@@ -170,18 +169,7 @@ namespace Rowbot.Connectors.SqlServer
             using (SqlConnection connection = new SqlConnection(Options.ConnectionString))
             {
                 await connection.OpenAsync();
-
-                if (Options.TruncateTable)
-                {
-                    using (SqlCommand truncateCommand = (SqlCommand)_sqlCommandProvider.GetTruncateDataSetCommand())
-                    {
-                        truncateCommand.CommandText = TruncateDataSetCommandText(truncateCommand.CommandText);
-                        truncateCommand.Connection = connection;
-                        _logger.LogCommand(truncateCommand);
-                        rowsChanged += await truncateCommand.ExecuteNonQueryAsync();
-                    }
-                }
-
+                
                 using (SqlCommand createCommand = (SqlCommand)_sqlCommandProvider.GetCreateDataSetCommand())
                 {
                     createCommand.CommandText = CreateDataSetCommandText(createCommand.CommandText);
@@ -217,7 +205,7 @@ namespace Rowbot.Connectors.SqlServer
             return rowsChanged > 0;
         }
 
-        private DataTable ToDataTable(IEnumerable<TTarget> data)
+        private DataTable ToDataTable(IEnumerable<TInput> data)
         {
             var dataTable = new DataTable();
 
@@ -246,9 +234,9 @@ namespace Rowbot.Connectors.SqlServer
             return dataTable;
         }
 
-        private Expression<Action<DataRow, TTarget>> GetDataRowValueAssigningExpression(FieldDescriptor field, PropertyInfo dataRowIndexer)
+        private Expression<Action<DataRow, TInput>> GetDataRowValueAssigningExpression(FieldDescriptor field, PropertyInfo dataRowIndexer)
         {
-            var sourceType = typeof(TTarget);
+            var sourceType = typeof(TInput);
             var sourceTypeParameter = Expression.Parameter(sourceType);
 
             var dataRowType = typeof(DataRow);
@@ -262,13 +250,13 @@ namespace Rowbot.Connectors.SqlServer
                 var isNullCondition = Expression.Condition(valueEqualsNull, dbNullValue, Expression.Convert(Expression.MakeMemberAccess(sourceTypeParameter, field.Property), typeof(object)));
 
                 var body = Expression.Assign(dataRowSetter, isNullCondition);
-                var lambda = Expression.Lambda<Action<DataRow, TTarget>>(body, dataRowTypeParameter, sourceTypeParameter);
+                var lambda = Expression.Lambda<Action<DataRow, TInput>>(body, dataRowTypeParameter, sourceTypeParameter);
                 return lambda;
             }
             else
             {
                 var body = Expression.Assign(dataRowSetter, Expression.Convert(Expression.MakeMemberAccess(sourceTypeParameter, field.Property), typeof(object)));
-                var lambda = Expression.Lambda<Action<DataRow, TTarget>>(body, dataRowTypeParameter, sourceTypeParameter);
+                var lambda = Expression.Lambda<Action<DataRow, TInput>>(body, dataRowTypeParameter, sourceTypeParameter);
                 return lambda;
             }
         }

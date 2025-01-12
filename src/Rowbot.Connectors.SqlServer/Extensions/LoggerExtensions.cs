@@ -2,14 +2,14 @@
 using System.Data;
 using System.Text.RegularExpressions;
 
-namespace Rowbot.Connectors.SqlServer
+namespace Rowbot.Connectors.SqlServer.Extensions
 {
-    public static class LoggerExtensions
+    internal static class LoggerExtensions
     {
-        public static void LogQuery<TSource>(this ILogger<SqlServerReadConnector<TSource>> logger, IDbCommand command)
+        public static void LogQuery<TInput, TOutput>(this ILogger<SqlServerReadConnector<TInput, TOutput>> logger, IDbCommand command)
             => logger.LogQueryOrCommand(command);
 
-        public static void LogCommand<TTarget>(this ILogger<SqlServerWriteConnector<TTarget>> logger, IDbCommand command)
+        public static void LogCommand<TInput>(this ILogger<SqlServerWriteConnector<TInput>> logger, IDbCommand command)
             => logger.LogQueryOrCommand(command);
 
         private static void LogQueryOrCommand(this ILogger logger, IDbCommand command)

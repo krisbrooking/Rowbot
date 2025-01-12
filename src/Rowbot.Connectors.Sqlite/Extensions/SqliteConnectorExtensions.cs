@@ -1,50 +1,52 @@
-﻿using Rowbot.Connectors.Sqlite;
+﻿using Rowbot.Entities;
+using Rowbot.Pipelines.Tasks;
 
-namespace Rowbot
+namespace Rowbot.Connectors.Sqlite
 {
     public static class SqliteConnectorExtensions
     {
         /// <summary>
         /// Extracts data from a Sqlite database using a query.
         /// </summary>
-        public static IPipelineExtractor<TSource> ExtractSqlite<TSource>(this IPipelineBuilder pipelineBuilder, string connectionString, string query, Action<SqliteReadConnectorOptions<TSource>>? configure = default)
+        public static IExtractBuilderConnectorStep<TInput, TOutput> FromSqlite<TInput, TOutput>(
+            this IExtractBuilder<TInput, TOutput> builder, 
+            string connectionString, 
+            string query, 
+            Action<SqliteReadConnectorOptions<TOutput>>? configure = null)
         {
-            var options = new SqliteReadConnectorOptions<TSource>();
-            options.ConnectionString = connectionString;
+            var options = new SqliteReadConnectorOptions<TOutput>(connectionString);
             options.Query = query;
             configure?.Invoke(options);
 
-            return pipelineBuilder.Extract<SqliteReadConnector<TSource>, TSource, SqliteReadConnectorOptions<TSource>>(options);
+            return builder.WithConnector<SqliteReadConnector<TInput, TOutput>>(extractor => extractor.Options = options);
         }
 
         /// <summary>
         /// Loads data to a Sqlite database table.
         /// </summary>
-        public static IPipelineLoader<TTarget> LoadSqlite<TSource, TTarget>(this IPipelineTransformer<TSource, TTarget> pipelineTransformer, string connectionString, Action<SqliteWriteConnectorOptions<TTarget>>? configure = default)
+        public static ILoadBuilderConnectorStep<TInput, SqliteWriteConnector<TInput>> ToSqlite<TInput>(
+            this ILoadBuilder<TInput> builder, 
+            string connectionString, 
+            Action<SqliteConnectorOptions>? configure = null)
         {
-            var options = new SqliteWriteConnectorOptions<TTarget>();
-            options.ConnectionString = connectionString;
+            var options = new SqliteConnectorOptions(connectionString);
             configure?.Invoke(options);
 
-            var pipelineLoader = pipelineTransformer.Load<SqliteWriteConnector<TTarget>, TTarget, SqliteWriteConnectorOptions<TTarget>>(options);
+            return builder.WithConnector<SqliteWriteConnector<TInput>>(loader => loader.Options = options);
+        }
 
-            foreach (var pipelineCommand in options.PipelineCommands)
+        /// <summary>
+        /// Truncates a Sqlite database table
+        /// </summary>
+        public static ILoadBuilderConnectorStep<TInput, SqliteWriteConnector<TInput>> TruncateTable<TInput>(
+            this ILoadBuilderConnectorStep<TInput, SqliteWriteConnector<TInput>> connectorStep)
+        {
+            var entity = new Entity<TInput>();
+            
+            return connectorStep.WithTask(async connector =>
             {
-                if (pipelineLoader is ICustomPipelineLoader<TTarget> customLoader)
-                {
-                    var writeConnector = customLoader.WriteConnectorFactory() as SqliteWriteConnector<TTarget>;
-                    if (writeConnector is { })
-                    {
-                        customLoader.AddPipelineBlock(async () =>
-                        {
-                            await writeConnector.ExecuteCommandAsync(pipelineCommand.Command);
-                        },
-                        pipelineCommand.Priority);
-                    }
-                }
-            }
-
-            return pipelineLoader;
+                await connector.ExecuteCommandAsync($"TRUNCATE TABLE {entity.Descriptor.Value.TableName}");
+            }, "Truncate Table", TaskExecutionOrder.PrePipeline, TaskPriority.High);
         }
     }
 }
