@@ -36,16 +36,19 @@ public class CustomerPipelines(IPipelineBuilder pipelineBuilder) : IPipeline
             .Extract<SourceCustomer>(builder => builder
                 .FromSqlite(
                     "Data Source=source.db",
-                    "SELECT [CustomerId], [CustomerName] FROM [SourceCustomers]"),
-                10)
-            .Transform<Customer>(source => 
-                source.Select(customer => 
-                    new Customer
-                    {
-                        Id = customer.CustomerId, 
-                        Name = customer.CustomerName
-                    }).ToArray())
-            .Load(builder => builder.ToSqlite("Data Source=target.db"));
+                    "SELECT [CustomerId], [CustomerName] FROM [SourceCustomers]")
+            )
+            .Transform<Customer>(source => source
+                .Select(customer => new Customer
+                {
+                    Id = customer.CustomerId, 
+                    Name = customer.CustomerName
+                })
+                .ToArray()
+            )
+            .Load(builder => builder
+                .ToSqlite("Data Source=target.db")
+            );
 }
 ```
 
@@ -92,16 +95,19 @@ public Pipeline Load() =>
         .Extract<SourceCustomer>(builder => builder
             .FromSqlite(
                 "Data Source=source.db",
-                "SELECT [CustomerId], [CustomerName] FROM [SourceCustomers]"),
-            10)
-        .Transform<Customer>(source => 
-            source.Select(customer => 
-                new Customer
-                {
-                    Id = customer.CustomerId, 
-                    Name = customer.CustomerName
-                }).ToArray())
-        .Load(builder => builder.ToSqlite("Data Source=target.db"));
+                "SELECT [CustomerId], [CustomerName] FROM [SourceCustomers]")
+        )
+        .Transform<Customer>(source => source
+            .Select(customer => new Customer
+            {
+                Id = customer.CustomerId, 
+                Name = customer.CustomerName
+            })
+            .ToArray()
+        )
+        .Load(builder => builder
+            .ToSqlite("Data Source=target.db")
+        );
 ```
 
 ## Run a Pipeline
