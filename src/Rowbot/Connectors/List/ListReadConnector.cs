@@ -6,8 +6,6 @@ public sealed class ListReadConnector<TInput, TOutput> : IReadConnector<TInput, 
 
     public Task<IEnumerable<TOutput>> QueryAsync(ExtractParameter[] parameters)
     {
-        var data = Options.Query(parameters);
-            
-        return Task.FromResult(data);
+        return Task.FromResult(Options.Data.AsEnumerable());
     }
 }

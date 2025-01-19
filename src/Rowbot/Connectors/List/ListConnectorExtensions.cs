@@ -9,23 +9,12 @@ public static class ListConnectorExtensions
     /// </summary>
     public static IExtractBuilderConnectorStep<TInput, TOutput> FromList<TInput, TOutput>(
         this IExtractBuilder<TInput, TOutput> builder, 
-        IEnumerable<TOutput> data)
+        List<TOutput> data)
     {
-        var options = new ListReadConnectorOptions<TOutput>();
-        options.Query = (parameters) => data;
-
-        return builder.WithConnector<ListReadConnector<TInput, TOutput>>(connector => connector.Options = options);
-    }
-        
-    /// <summary>
-    /// Extracts data from an in-memory list.
-    /// </summary>
-    public static IExtractBuilderConnectorStep<TInput, TOutput> FromList<TInput, TOutput>(
-        this IExtractBuilder<TInput, TOutput> builder, 
-        Func<ExtractParameter[], IEnumerable<TOutput>> query)
-    {
-        var options = new ListReadConnectorOptions<TOutput>();
-        options.Query = query;
+        var options = new ListReadConnectorOptions<TOutput>
+        {
+            Data = data,
+        };
 
         return builder.WithConnector<ListReadConnector<TInput, TOutput>>(connector => connector.Options = options);
     }
@@ -46,7 +35,7 @@ public static class ListConnectorExtensions
     
 public sealed class ListReadConnectorOptions<TOutput>
 {
-    public Func<ExtractParameter[], IEnumerable<TOutput>> Query { get; set; } = (parameters) => [];
+    public List<TOutput> Data { get; set; } = [];
 }
 
 public sealed class ListWriteConnectorOptions<TInput>

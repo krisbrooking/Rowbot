@@ -8,7 +8,7 @@ namespace Rowbot.IntegrationTests.Tests;
 public class ExtractParameterTests
 {
     [Fact]
-    public async Task SecondExtractBlock_ShouldIncludeParametersFromPreviousBlock()
+    public async Task DeferredExtractBlock_ShouldIncludeInputFromPreviousBlock()
     {
         var data = new TargetData();
         
@@ -50,11 +50,6 @@ public class OrderPipelines(IPipelineBuilder pipelineBuilder, TargetData targetD
                         .Select(x => new SourceOrderLine
                             { OrderLineId = x, OrderId = input.OrderId })
                         .ToList())
-                .WithExtractor(async (context, connector) =>
-                {
-                    var id = input.OrderId;
-                    return await connector.QueryAsync(context.GetParameters());
-                })
             )
             .Transform<SourceOrderLine>(source => source)
             .Load(builder => builder
