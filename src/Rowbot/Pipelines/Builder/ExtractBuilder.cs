@@ -19,6 +19,7 @@ public interface IExtractBuilder<TInput, TOutput>
 
 public interface IExtractBuilderConnectorStep<TInput, TOutput> : IExtractBuilderExtractorStep<TInput, TOutput>
 {
+    IExtractBuilderConnectorStep<TInput, TOutput> WithParameter<T>(string parameterName, T parameterValue);
     /// <summary>
     /// Adds an extractor to the pipeline.
     /// </summary>
@@ -50,11 +51,11 @@ internal interface IExtractBuilderConnectorStepInternal<TInput, TOutput>
     IExtractBuilderExtractorStep<TInput, TOutput> AddDefaultExtractor();
 }
 
-public class ExtractBuilder<TInput, TOutput>(PipelineBuilderContext context, int batchSize)
+public class ExtractBuilder<TInput, TOutput>(PipelineBuilderContext context, ExtractOptions? extractOptions = null)
     : IExtractBuilder<TInput, TOutput>
 {
     private readonly PipelineBuilderContext _context = context;
-    private readonly int _batchSize = batchSize;
+    private readonly ExtractOptions _extractOptions = extractOptions ?? new ExtractOptions();
     
     public IExtractBuilderConnectorStep<TInput, TOutput> WithConnector<TConnector>(Action<TConnector>? configure = null) 
         where TConnector : IReadConnector<TInput, TOutput>
@@ -62,21 +63,29 @@ public class ExtractBuilder<TInput, TOutput>(PipelineBuilderContext context, int
         var readConnector = _context.ServiceFactory.CreateReadConnector<TConnector, TInput, TOutput>();
         configure?.Invoke(readConnector);
         
-        return new ExtractConnector<TInput, TOutput>(_context, _batchSize, readConnector);
+        return new ExtractConnector<TInput, TOutput>(_context, _extractOptions, readConnector);
     }
 }
 
 public class ExtractConnector<TInput, TOutput>(
     PipelineBuilderContext context, 
-    int batchSize, 
+    ExtractOptions extractOptions, 
     IReadConnector<TInput, TOutput> readConnector)
     : IExtractBuilderConnectorStep<TInput, TOutput>, IExtractBuilderConnectorStepInternal<TInput, TOutput>
 {
     private readonly PipelineBuilderContext _context = context;
-    private readonly int _batchSize = batchSize;
+    private readonly ExtractOptions _extractOptions = extractOptions;
     private readonly IReadConnector<TInput, TOutput> _readConnector = readConnector;
+    private readonly List<ExtractParameter> _parameters = [];
     
     public bool HasExtractor { get; private set; }
+
+    public IExtractBuilderConnectorStep<TInput, TOutput> WithParameter<T>(string parameterName, T parameterValue)
+    {
+        _parameters.Add(new ExtractParameter(parameterName, parameterValue!.GetType(), parameterValue));
+
+        return this;
+    }
 
     public IExtractBuilderExtractorStep<TInput, TOutput> WithExtractor<TExtractor>(Action<TExtractor>? configure = null)
         where TExtractor : IExtractor<TInput, TOutput>
@@ -96,19 +105,19 @@ public class ExtractConnector<TInput, TOutput>(
 
         if (_context.Blocks.Count == 0)
         {
-            _context.Blocks.Enqueue(new ExtractBlock<TInput, TOutput>(
+            _context.Blocks.Enqueue(new PrimaryExtractBlock<TInput, TOutput>(
                 extractor, 
-                _context.LoggerFactory, 
-                _batchSize, 
-                new BlockOptions()));
+                _context.LoggerFactory,
+                _parameters.ToArray(),
+                _extractOptions));
         }
         else
         {
-            _context.Blocks.Enqueue(new ExtractTransformBlock<TInput, TOutput>(
+            _context.Blocks.Enqueue(new EagerExtractBlock<TInput, TOutput>(
                 extractor, 
-                _context.LoggerFactory, 
-                _batchSize, 
-                new BlockOptions()));
+                _context.LoggerFactory,
+                _parameters.ToArray(),
+                _extractOptions));
         }
         
         HasExtractor = true;

@@ -5,29 +5,29 @@ using Rowbot.Extractors.Framework;
 
 namespace Rowbot.Pipelines.Blocks;
 
-public sealed class ExtractTransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSource<TOutput>
+public sealed class EagerExtractBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSource<TOutput>
 {
     private readonly IExtractor<TInput, TOutput> _extractor;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly int _batchSize;
-    private readonly BlockOptions _blockOptions;
+    private readonly ExtractParameter[] _parameters;
+    private readonly ExtractOptions _blockOptions;
     private readonly CancellationToken _cancellationToken;
     private int _exceptionCount;
 
-    public ExtractTransformBlock(
+    public EagerExtractBlock(
         IExtractor<TInput, TOutput> extractor, 
         ILoggerFactory loggerFactory, 
-        int batchSize,
-        BlockOptions blockOptions,
+        ExtractParameter[] parameters,
+        ExtractOptions blockOptions,
         CancellationToken token = default)
     {
         _extractor = extractor;
         _loggerFactory = loggerFactory;
-        _batchSize = batchSize;
+        _parameters = parameters;
         _blockOptions = blockOptions;
         _cancellationToken = token;
 
-        var channel = Channel.CreateBounded<TInput[]>(blockOptions.BoundedCapacity);
+        var channel = Channel.CreateBounded<TInput[]>(blockOptions.ChannelBoundedCapacity);
         Reader = channel.Reader;
         WriterIn = channel.Writer;
     }
@@ -51,26 +51,26 @@ public sealed class ExtractTransformBlock<TInput, TOutput> : IBlockTarget<TInput
                         return;
                     }
 
-                    var logger = _loggerFactory.CreateLogger<ExtractTransformBlock<TInput, TOutput>>();
-                    var blockSummary = BlockSummaryFactory.Create<ExtractTransformBlock<TInput, TOutput>>();
+                    var logger = _loggerFactory.CreateLogger<EagerExtractBlock<TInput, TOutput>>();
+                    var blockSummary = BlockSummaryFactory.Create<EagerExtractBlock<TInput, TOutput>>();
 
                     try
                     {
-                        var result = new List<TOutput>(_batchSize);
+                        var result = new List<TOutput>(_blockOptions.BatchSize);
 
                         await foreach (var items in Reader.ReadAllAsync(_cancellationToken))
                         {
                             foreach (var item in items)
                             {
                                 await foreach (var output in _extractor.ExtractAsync(
-                                                   new ExtractContext<TInput>(_batchSize, item),
+                                                   new ExtractContext<TInput>(_blockOptions.BatchSize, item, _parameters),
                                                    _cancellationToken))
                                 {
                                     result.Add(output);
-                                    if (result.Count == _batchSize)
+                                    if (result.Count == _blockOptions.BatchSize)
                                     {
                                         await WriteAsync(result, blockSummary).ConfigureAwait(false);
-                                        result = new List<TOutput>(_batchSize);
+                                        result = new List<TOutput>(_blockOptions.BatchSize);
                                     }
                                 }
                             }
@@ -79,7 +79,7 @@ public sealed class ExtractTransformBlock<TInput, TOutput> : IBlockTarget<TInput
                         if (result.Count > 0)
                         {
                             await WriteAsync(result, blockSummary).ConfigureAwait(false);
-                            result = new List<TOutput>(_batchSize);
+                            result = new List<TOutput>(_blockOptions.BatchSize);
                         }
                     }
                     catch (Exception ex)

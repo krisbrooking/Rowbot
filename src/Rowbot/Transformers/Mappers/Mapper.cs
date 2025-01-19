@@ -45,19 +45,31 @@ public class Mapper<TSource, TTarget>
     /// </summary>
     public TTarget Apply(TSource source)
     {
-        var target = Activator.CreateInstance<TTarget>();
-
-        foreach (var mapperAction in _sourceMapperActions.OrderBy(x => x.ActionType))
+        if (source is TTarget instance)
         {
-            mapperAction.Apply(source, target);
-        }
+            foreach (var mapperAction in _targetMapperActions.OrderBy(x => x.ActionType))
+            {
+                mapperAction.Apply(instance);
+            }
 
-        foreach (var mapperAction in _targetMapperActions.OrderBy(x => x.ActionType))
+            return instance;
+        }
+        else
         {
-            mapperAction.Apply(target);
-        }
+            var target = Activator.CreateInstance<TTarget>();
 
-        return target;
+            foreach (var mapperAction in _sourceMapperActions.OrderBy(x => x.ActionType))
+            {
+                mapperAction.Apply(source, target);
+            }
+            
+            foreach (var mapperAction in _targetMapperActions.OrderBy(x => x.ActionType))
+            {
+                mapperAction.Apply(target);
+            }
+
+            return target;
+        }
     }
 
     /// <summary>

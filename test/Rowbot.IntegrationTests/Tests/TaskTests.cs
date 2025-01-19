@@ -36,11 +36,11 @@ namespace Rowbot.IntegrationTests.Tests
                         .FromSqlite(
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
-                        .WithTask(async connector =>
+                        .WithTask(async (connector, logger) =>
                         {
                             await connector.ExecuteCommandAsync(
                                 "CREATE INDEX IF NOT EXISTS idx_CustomerName ON SourceCustomer(CustomerName)");

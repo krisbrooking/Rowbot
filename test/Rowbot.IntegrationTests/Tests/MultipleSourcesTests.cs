@@ -75,7 +75,7 @@ namespace Rowbot.IntegrationTests.Tests
                         .FromSqlite(
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
@@ -90,7 +90,7 @@ namespace Rowbot.IntegrationTests.Tests
                         .FromSqlite(
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SecondSourceCustomer]"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
@@ -119,7 +119,7 @@ namespace Rowbot.IntegrationTests.Tests
                             WHERE
 	                            source.[CustomerId] IS NULL
                             "),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
@@ -147,7 +147,7 @@ namespace Rowbot.IntegrationTests.Tests
 	                            customer.[IsActive] = 1 AND
 	                            customer.[Source] = 2 AND
 	                            (second.[CustomerId] IS NULL OR mapping.[SourceCustomerId] IS NOT NULL)"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Transform<Customer>(source => 
                         source.Select(x => new Customer()
                         {

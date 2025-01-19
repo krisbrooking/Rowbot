@@ -24,7 +24,7 @@ namespace Rowbot.IntegrationTests.Tests
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(25, rows.Count());
-            Assert.Equal(3, result.First(x => x.Name == "CursorPagination").BlockSummaries.First(x => x.Name == "ExtractBlock`2").TotalBatches);
+            Assert.Equal(3, result.First(x => x.Name == "CursorPagination").BlockSummaries.First(x => x.Name == "PrimaryExtractBlock`2").TotalBatches);
         }
 
         [Fact]
@@ -53,7 +53,7 @@ namespace Rowbot.IntegrationTests.Tests
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(25, rows.Count());
-            Assert.Equal(3, result.First(x => x.Name == "OffsetPagination").BlockSummaries.First(x => x.Name == "ExtractBlock`2").TotalBatches);
+            Assert.Equal(3, result.First(x => x.Name == "OffsetPagination").BlockSummaries.First(x => x.Name == "PrimaryExtractBlock`2").TotalBatches);
         }
 
         [Fact]
@@ -80,7 +80,7 @@ namespace Rowbot.IntegrationTests.Tests
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer] WHERE [CustomerId] > @CustomerId ORDER BY [CustomerId] LIMIT @BatchSize")
                         .WithCursorPagination(x => x.CustomerId),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString));
@@ -93,7 +93,7 @@ namespace Rowbot.IntegrationTests.Tests
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer] ORDER BY [CustomerId] LIMIT @BatchSize OFFSET @Offset")
                         .WithOffsetPagination(),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString));

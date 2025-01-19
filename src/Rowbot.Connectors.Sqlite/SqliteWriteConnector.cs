@@ -62,6 +62,11 @@ namespace Rowbot.Connectors.Sqlite
 
         public async Task<int> InsertAsync(IEnumerable<TInput> data)
         {
+            if (data.Count() == 0)
+            {
+                return 0;
+            }
+
             int rowsChanged = 0;
 
             using (var connection = new SqliteConnection(Options?.ConnectionString))
@@ -92,6 +97,11 @@ namespace Rowbot.Connectors.Sqlite
 
         public async Task<int> UpdateAsync(IEnumerable<RowUpdate<TInput>> data)
         {
+            if (data.Count() == 0)
+            {
+                return 0;
+            }
+
             int rowsChanged = 0;
 
             using (var connection = new SqliteConnection(Options?.ConnectionString))

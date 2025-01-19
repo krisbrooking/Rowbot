@@ -1,4 +1,5 @@
-﻿using Rowbot.Pipelines.Summary;
+﻿using Microsoft.Extensions.Logging;
+using Rowbot.Pipelines.Summary;
 
 namespace Rowbot.Pipelines.Tasks;
 
@@ -7,21 +8,24 @@ public sealed class LoadTask<TInput, TConnector>
     where TConnector : IWriteConnector<TInput>
 {
     private readonly TConnector _connector;
-    private readonly Func<TConnector, Task>? _asyncTask;
-    private readonly Action<TConnector>? _task;
+    private readonly Func<TConnector, ILogger<LoadTask<TInput, TConnector>>, Task>? _asyncTask;
+    private readonly Action<TConnector, ILogger<LoadTask<TInput, TConnector>>>? _task;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly string _name;
 
-    public LoadTask(TConnector connector, Func<TConnector, Task> asyncTask, string name)
+    public LoadTask(TConnector connector, Func<TConnector, ILogger<LoadTask<TInput, TConnector>>, Task> asyncTask, ILoggerFactory loggerFactory, string name)
     {
         _connector = connector;
         _asyncTask = asyncTask;
+        _loggerFactory = loggerFactory;
         _name = name;
     }
     
-    public LoadTask(TConnector connector, Action<TConnector> task, string name)
+    public LoadTask(TConnector connector, Action<TConnector, ILogger<LoadTask<TInput, TConnector>>> task, ILoggerFactory loggerFactory, string name)
     {
         _connector = connector;
         _task = task;
+        _loggerFactory = loggerFactory;
         _name = name;
     }
     
@@ -37,7 +41,7 @@ public sealed class LoadTask<TInput, TConnector>
         var summary = new BlockSummary(_name);
         try
         {
-            await _asyncTask(_connector);
+            await _asyncTask(_connector, _loggerFactory.CreateLogger<LoadTask<TInput, TConnector>>());
         }
         catch (Exception ex)
         {
@@ -57,7 +61,7 @@ public sealed class LoadTask<TInput, TConnector>
         var summary = new BlockSummary(_name);
         try
         {
-            _task(_connector);
+            _task(_connector, _loggerFactory.CreateLogger<LoadTask<TInput, TConnector>>());
         }
         catch (Exception ex)
         {

@@ -54,7 +54,7 @@ namespace Rowbot.IntegrationTests.Tests
                         .FromSqlite(
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
@@ -69,7 +69,7 @@ namespace Rowbot.IntegrationTests.Tests
                         .FromSqlite(
                             SqliteTest.ConnectionString,
                             "SELECT [ProductId], [ProductName], [Price], [Cost] FROM [SourceProduct]"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Product>(mapper => Product.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
@@ -84,7 +84,7 @@ namespace Rowbot.IntegrationTests.Tests
                         .FromSqlite(
                             SqliteTest.ConnectionString,
                             "SELECT [OrderId], [OrderDate] FROM [SourceOrder]"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<Order>(mapper => Order.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
@@ -99,7 +99,7 @@ namespace Rowbot.IntegrationTests.Tests
                         .FromSqlite(
                             SqliteTest.ConnectionString,
                             "SELECT [OrderLineId], [OrderId], [CustomerId], [ProductId], [Quantity] FROM [SourceOrderLine]"),
-                        10)
+                        options: new ExtractOptions(batchSize: 10))
                     .Apply<OrderLine>(mapper => OrderLine.ConfigureMapper(mapper))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)

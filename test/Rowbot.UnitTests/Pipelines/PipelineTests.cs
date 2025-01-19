@@ -34,7 +34,7 @@ namespace Rowbot.UnitTests.Pipelines
             var result = Pipeline.LinkBlocks(blocks);
 
             Assert.Equal(3, result.Count);
-            Assert.Equal("ExtractBlock`2,TransformBlock`2,LoadBlock`1", string.Join(',', result.Select(x => x.Target?.GetType().Name)));
+            Assert.Equal("PrimaryExtractBlock`2,TransformBlock`2,LoadBlock`1", string.Join(',', result.Select(x => x.Target?.GetType().Name)));
         }
 
         [Fact]
@@ -69,21 +69,22 @@ namespace Rowbot.UnitTests.Pipelines
             var extractor = new DefaultExtractor<SourcePerson, SourcePerson>();
             extractor.Connector = connector;
 
-            return new ExtractBlock<SourcePerson, SourcePerson>(extractor, new NullLoggerFactory(), 1000, new BlockOptions());
+            return new PrimaryExtractBlock<SourcePerson, SourcePerson>(extractor, new NullLoggerFactory(), [], new ExtractOptions());
         }
 
         private IBlock GetValidTransformerBlock()
         {
             var transformer = new Transformer<SourcePerson, TargetPerson>();
 
-            return new TransformBlock<SourcePerson, TargetPerson>(transformer, new NullLoggerFactory(), new BlockOptions());
+            return new TransformBlock<SourcePerson, TargetPerson>(transformer, new NullLoggerFactory(), new TransformOptions());
         }
 
         private IBlock GetValidLoadBlock()
         {
-            var loader = new DefaultLoader<TargetPerson>();
+            var logger = NullLoggerFactory.Instance.CreateLogger<DefaultLoader<TargetPerson>>();
+            var loader = new DefaultLoader<TargetPerson>(logger);
 
-            return new LoadBlock<TargetPerson>(loader, new NullLoggerFactory(), new BlockOptions());
+            return new LoadBlock<TargetPerson>(loader, new NullLoggerFactory(), new LoadOptions());
         }
     }
 }

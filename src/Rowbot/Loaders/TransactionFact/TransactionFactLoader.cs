@@ -54,8 +54,15 @@ public sealed class TransactionFactLoader<TInput>(
             }
         }
 
-        var rowsInserted = await connector.InsertAsync(rowsToInsert);
-        _logger.LogInformation("Rows inserted: {rows}/{total}", rowsInserted, rowsToInsert.Count);
+        if (rowsToInsert.Count > 0)
+        {
+            var rowsInserted = await connector.InsertAsync(rowsToInsert);
+            _logger.LogInformation("Rows inserted: {rows}/{total}", rowsInserted, rowsToInsert.Count);
+        }
+        else
+        {
+            _logger.LogInformation("Rows changed: 0");
+        }
 
         return new LoadResult<TInput>(rowsToInsert, Enumerable.Empty<RowUpdate<TInput>>());
     }

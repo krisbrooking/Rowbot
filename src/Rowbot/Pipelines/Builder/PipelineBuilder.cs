@@ -31,7 +31,7 @@ public interface IPipelineBuilder
     /// </remarks>
     IPipelineBuilder<TOutput, TOutput> Extract<TOutput>(
         Func<IExtractBuilder<TOutput, TOutput>, IExtractBuilderExtractorStep<TOutput, TOutput>> builder,
-        int batchSize = 1000);
+        ExtractOptions? options = null);
 }
 
  /// <summary>
@@ -60,7 +60,22 @@ public interface IPipelineBuilder<TPrevious, TInput>
     /// <returns>Pipeline block</returns>
     IPipelineBuilder<TInput, TOutput> Extract<TOutput>(
         Func<IExtractBuilder<TInput, TOutput>, IExtractBuilderExtractorStep<TInput, TOutput>> builder,
-        int batchSize = 1000);
+        ExtractOptions? options = null);
+
+    /// <summary>
+    /// Adds an extract block. An extract block uses a read connector and an extractor to get data from a source.
+    /// </summary>
+    /// <param name="builder">Returns completed extract block builder
+    ///     <param name="builder arg1">Entry point for the extract block builder</param>
+    ///     <param name="builder arg2">Input entity instance passed through from previous extract block</param>
+    /// </param>
+    /// <param name="batchSize">Number of items the extract block will process before sending to subsequent block</param>
+    /// <typeparam name="TInput">Output type of the previous block</typeparam>
+    /// <typeparam name="TOutput">Data type to extract</typeparam>
+    /// <returns>Pipeline block</returns>
+    IPipelineBuilder<TInput, TOutput> Extract<TOutput>(
+        Func<IExtractBuilder<TInput, TOutput>, TInput, IExtractBuilderExtractorStep<TInput, TOutput>> builder,
+        ExtractOptions? options = null);
 
     /// <summary>
     /// Adds a transform block. A transform block is used to convert from a data type <typeparamref name="TInput"/>
@@ -68,7 +83,9 @@ public interface IPipelineBuilder<TPrevious, TInput>
     /// </summary>
     /// <param name="transform">Transformer function</param>
     /// <returns>Pipeline block</returns>
-    IPipelineBuilder<TInput, TOutput> Transform<TOutput>(Func<TInput[], Task<TOutput[]>> transform);
+    IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
+        Func<TInput[], Task<TOutput[]>> transform,
+        TransformOptions? options = null);
 
     /// <summary>
     /// Adds a transform block. A transform block is used to convert from a data type <typeparamref name="TInput"/>
@@ -76,7 +93,9 @@ public interface IPipelineBuilder<TPrevious, TInput>
     /// </summary>
     /// <param name="transform">Transformer function</param>
     /// <returns>Pipeline block</returns>
-    IPipelineBuilder<TInput, TOutput> Transform<TOutput>(Func<TInput[], TOutput[]> transform);
+    IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
+        Func<TInput[], TOutput[]> transform,
+        TransformOptions? options = null);
 
     /// <summary>
     /// Adds a transform block. Apply is a special kind of transform where the transformation is described declaratively
@@ -87,13 +106,23 @@ public interface IPipelineBuilder<TPrevious, TInput>
     IPipelineBuilder<TInput, TOutput> Apply<TOutput>(Action<MapperConfiguration<TInput, TOutput>> mapper);
 
     /// <summary>
+    /// Adds a transform block. Apply is a special kind of transform where the transformation is described declaratively
+    /// as a mapper configuration. The mapper is applied to every item <typeparamref name="TInput"/>.
+    /// </summary>
+    /// <param name="mapper">Mapper configuration</param>
+    /// <returns>Pipeline block</returns>
+    IPipelineBuilder<TInput, TInput> Apply(Action<MapperConfiguration<TInput, TInput>> mapper);
+
+    /// <summary>
     /// Adds a load block. A load block uses a write connector and a loader to push data to a destination.
     /// </summary>
     /// <param name="builder">Returns completed load block builder
     ///     <param name="builder arg1">Entry point for the load block builder</param>
     /// </param>
     /// <returns>Completed pipeline definition</returns>
-    Pipeline Load(Func<ILoadBuilder<TInput>, ILoadBuilderLoaderStep<TInput>> builder);
+    Pipeline Load(
+        Func<ILoadBuilder<TInput>, ILoadBuilderLoaderStep<TInput>> builder,
+        LoadOptions? options = null);
 }
 
 public class PipelineBuilder(ILoggerFactory loggerFactory, ServiceFactory genericServiceFactory)
@@ -111,9 +140,9 @@ public class PipelineBuilder(ILoggerFactory loggerFactory, ServiceFactory generi
      
      public IPipelineBuilder<TOutput, TOutput> Extract<TOutput>(
          Func<IExtractBuilder<TOutput, TOutput>, IExtractBuilderExtractorStep<TOutput, TOutput>> builder,
-         int batchSize = 1000)
+         ExtractOptions? options = null)
      {
-         var extractBuilder = new ExtractBuilder<TOutput, TOutput>(_context, batchSize);
+         var extractBuilder = new ExtractBuilder<TOutput, TOutput>(_context, options);
 
          var extractorStep = builder(extractBuilder);
 
@@ -134,9 +163,9 @@ public class PipelineBuilder<TPrevious, TInput>(PipelineBuilderContext context)
     
     public IPipelineBuilder<TInput, TOutput> Extract<TOutput>(
         Func<IExtractBuilder<TInput, TOutput>, IExtractBuilderExtractorStep<TInput, TOutput>> builder,
-        int batchSize = 1000)
+        ExtractOptions? options = null)
     {
-        var extractBuilder = new ExtractBuilder<TInput, TOutput>(_context, batchSize);
+        var extractBuilder = new ExtractBuilder<TInput, TOutput>(_context, options);
 
         var extractorStep = builder(extractBuilder);
 
@@ -149,22 +178,35 @@ public class PipelineBuilder<TPrevious, TInput>(PipelineBuilderContext context)
         return new PipelineBuilder<TInput, TOutput>(_context);
     }
 
-    public IPipelineBuilder<TInput, TOutput> Transform<TOutput>(Func<TInput[], Task<TOutput[]>> transform)
+    public IPipelineBuilder<TInput, TOutput> Extract<TOutput>(
+        Func<IExtractBuilder<TInput, TOutput>, TInput, IExtractBuilderExtractorStep<TInput, TOutput>> builder,
+        ExtractOptions? options = null)
+    {
+        _context.Blocks.Enqueue(new DeferredExtractBlock<TInput, TOutput>(builder, _context.ServiceFactory, _context.LoggerFactory, options ?? new ExtractOptions()));
+
+        return new PipelineBuilder<TInput, TOutput>(_context);
+    }
+
+    public IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
+        Func<TInput[], Task<TOutput[]>> transform,
+        TransformOptions? options = null)
     {
         var transformer = _context.ServiceFactory.CreateAsyncTransformer<AsyncTransformer<TInput, TOutput>, TInput, TOutput>();
         transformer.TransformDelegate = transform;
         
-        _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, new BlockOptions()));
+        _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, options ?? new TransformOptions()));
         
         return new PipelineBuilder<TInput, TOutput>(_context);
     }
 
-    public IPipelineBuilder<TInput, TOutput> Transform<TOutput>(Func<TInput[], TOutput[]> transform)
+    public IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
+        Func<TInput[], TOutput[]> transform,
+        TransformOptions? options = null)
     {
         var transformer = _context.ServiceFactory.CreateTransformer<Transformer<TInput, TOutput>, TInput, TOutput>();
         transformer.TransformDelegate = transform;
         
-        _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, new BlockOptions()));
+        _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, options ?? new TransformOptions()));
         
         return new PipelineBuilder<TInput, TOutput>(_context);
     }
@@ -177,14 +219,19 @@ public class PipelineBuilder<TPrevious, TInput>(PipelineBuilderContext context)
         var transformer = _context.ServiceFactory.CreateTransformer<MapperTransformer<TInput, TOutput>, TInput, TOutput>();
         transformer.Mapper = new Mapper<TInput, TOutput>(mapperConfiguration);
         
-        _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, new BlockOptions()));
+        _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, new TransformOptions()));
         
         return new PipelineBuilder<TInput, TOutput>(_context);
     }
 
-    public Pipeline Load(Func<ILoadBuilder<TInput>, ILoadBuilderLoaderStep<TInput>> builder)
+    public IPipelineBuilder<TInput, TInput> Apply(Action<MapperConfiguration<TInput, TInput>> mapper) => 
+        Apply<TInput>(mapper);
+
+    public Pipeline Load(
+        Func<ILoadBuilder<TInput>, ILoadBuilderLoaderStep<TInput>> builder,
+        LoadOptions? options = null)
     {
-        var loadBuilder = new LoadBuilder<TInput>(_context);
+        var loadBuilder = new LoadBuilder<TInput>(_context, options);
         
         var loaderStep = builder(loadBuilder);
 

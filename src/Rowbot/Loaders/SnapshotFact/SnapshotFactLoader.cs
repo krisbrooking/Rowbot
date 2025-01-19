@@ -99,11 +99,22 @@ public sealed class SnapshotFactLoader<TInput>(
             }
         }
 
-        var rowsInserted = await connector.InsertAsync(rowsToInsert);
-        _logger.LogInformation("Rows inserted: {rows}/{total}", rowsInserted, rowsToInsert.Count);
+        if (rowsToInsert.Count > 0)
+        {
+            var rowsInserted = await connector.InsertAsync(rowsToInsert);
+            _logger.LogInformation("Rows inserted: {rows}/{total}", rowsInserted, rowsToInsert.Count);
+        }
 
-        var rowsUpdated = await connector.UpdateAsync(rowsToUpdate);
-        _logger.LogInformation("Rows updated: {rows}/{total}", rowsUpdated, rowsToUpdate.Count);
+        if (rowsToUpdate.Count > 0)
+        {
+            var rowsUpdated = await connector.UpdateAsync(rowsToUpdate);
+            _logger.LogInformation("Rows updated: {rows}/{total}", rowsUpdated, rowsToUpdate.Count);
+        }
+
+        if (rowsToInsert.Count == 0 && rowsToUpdate.Count == 0)
+        {
+            _logger.LogInformation("Rows changed: 0");
+        }
 
         return new LoadResult<TInput>(rowsToInsert, rowsToUpdate);
     }

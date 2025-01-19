@@ -9,19 +9,19 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
     private readonly ITransformer<TInput, TOutput>? _transformer;
     private readonly IAsyncTransformer<TInput, TOutput>? _asyncTransformer;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly BlockOptions _blockOptions;
+    private readonly TransformOptions _blockOptions;
     private int _exceptionCount;
 
     public TransformBlock(
         ITransformer<TInput, TOutput> transformer, 
         ILoggerFactory loggerFactory,
-        BlockOptions blockOptions)
+        TransformOptions blockOptions)
     {
         _transformer = transformer;
         _loggerFactory = loggerFactory;
         _blockOptions = blockOptions;
 
-        var channel = Channel.CreateBounded<TInput[]>(blockOptions.BoundedCapacity);
+        var channel = Channel.CreateBounded<TInput[]>(blockOptions.ChannelBoundedCapacity);
         Reader = channel.Reader;
         WriterIn = channel.Writer;
     }
@@ -29,13 +29,13 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
     public TransformBlock(
         IAsyncTransformer<TInput, TOutput> transformer, 
         ILoggerFactory loggerFactory,
-        BlockOptions blockOptions)
+        TransformOptions blockOptions)
     {
         _asyncTransformer = transformer;
         _loggerFactory = loggerFactory;
         _blockOptions = blockOptions;
 
-        var channel = Channel.CreateBounded<TInput[]>(blockOptions.BoundedCapacity);
+        var channel = Channel.CreateBounded<TInput[]>(blockOptions.ChannelBoundedCapacity);
         Reader = channel.Reader;
         WriterIn = channel.Writer;
     }

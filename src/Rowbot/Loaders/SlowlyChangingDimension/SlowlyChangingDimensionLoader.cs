@@ -171,6 +171,7 @@ public sealed class SlowlyChangingDimensionLoader<TInput>(
             var rowsInserted = await Connector!.InsertAsync(rowsToInsert);
             _logger.LogInformation("Rows inserted: {rows}/{total}", rowsInserted, rowsToInsert.Count);
         }
+
         if (rowsToUpdate.Count > 0)
         {
             var rowsUpdated = await Connector!.UpdateAsync(rowsToUpdate);

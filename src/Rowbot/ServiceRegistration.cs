@@ -27,6 +27,11 @@ public static class ServiceRegistrationExtensions
     /// </summary>
     public static IServiceCollection AddRowbot(this IServiceCollection services, params Assembly[] assemblies)
     {
+        if (assemblies.Length == 0)
+        {
+            assemblies = [Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()];
+        }
+
         services.RegisterServices();
         services.RegisterPipelines(assemblies);
 
@@ -70,6 +75,8 @@ public static class ServiceRegistrationExtensions
         var typesImplementingPipeline = assemblies
             .SelectMany(x => x.ExportedTypes)
             .Where(x => typeof(IPipeline).IsAssignableFrom(x));
+
+        var types = assemblies.SelectMany(x => x.ExportedTypes).ToList();
 
         foreach (var type in typesImplementingPipeline.Where(x => x != typeof(IPipeline)))
         {
@@ -116,6 +123,7 @@ public static class ServiceRegistrationExtensions
     private static IServiceCollection AddExtractors(this IServiceCollection services)
     {
         services.TryAddTransient(typeof(DefaultExtractor<,>));
+        services.TryAddTransient(typeof(InlineExtractor<,>));
         services.TryAddTransient(typeof(CursorPaginationExtractor<,,>));
         services.TryAddTransient(typeof(OffsetPaginationExtractor<,>));
 

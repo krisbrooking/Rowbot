@@ -5,25 +5,25 @@ using Rowbot.Pipelines.Summary;
 
 namespace Rowbot.Pipelines.Blocks;
 
-public sealed class ExtractBlock<TInput, TOutput> : IBlockSource<TOutput>
+public sealed class PrimaryExtractBlock<TInput, TOutput> : IBlockSource<TOutput>
 {
     private readonly IExtractor<TInput, TOutput> _extractor;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly int _batchSize;
-    private readonly BlockOptions _blockOptions;
+    private readonly ExtractParameter[] _parameters;
+    private readonly ExtractOptions _blockOptions;
     private readonly CancellationToken _cancellationToken;
     private int _exceptionCount;
 
-    public ExtractBlock(
+    public PrimaryExtractBlock(
         IExtractor<TInput, TOutput> extractor, 
-        ILoggerFactory loggerFactory, 
-        int batchSize,
-        BlockOptions blockOptions,
+        ILoggerFactory loggerFactory,
+        ExtractParameter[] parameters,
+        ExtractOptions blockOptions,
         CancellationToken token = default)
     {
         _extractor = extractor;
         _loggerFactory = loggerFactory;
-        _batchSize = batchSize;
+        _parameters = parameters;
         _blockOptions = blockOptions;
         _cancellationToken = token;
     }
@@ -45,27 +45,27 @@ public sealed class ExtractBlock<TInput, TOutput> : IBlockSource<TOutput>
                         return;
                     }
 
-                    var logger = _loggerFactory.CreateLogger<ExtractBlock<TInput, TOutput>>();
-                    var blockSummary = BlockSummaryFactory.Create<ExtractBlock<TInput, TOutput>>();
+                    var logger = _loggerFactory.CreateLogger<PrimaryExtractBlock<TInput, TOutput>>();
+                    var blockSummary = BlockSummaryFactory.Create<PrimaryExtractBlock<TInput, TOutput>>();
 
                     try
                     {
-                        var result = new List<TOutput>(_batchSize);
+                        var result = new List<TOutput>(_blockOptions.BatchSize);
 
-                        await foreach (var output in _extractor.ExtractAsync(new ExtractContext<TInput>(_batchSize), _cancellationToken))
+                        await foreach (var output in _extractor.ExtractAsync(new ExtractContext<TInput>(_blockOptions.BatchSize, _parameters), _cancellationToken))
                         {
                             result.Add(output);
-                            if (result.Count == _batchSize)
+                            if (result.Count == _blockOptions.BatchSize)
                             {
                                 await WriteAsync(result, blockSummary).ConfigureAwait(false);
-                                result = new List<TOutput>(_batchSize);
+                                result = new List<TOutput>(_blockOptions.BatchSize);
                             }
                         }
 
                         if (result.Count > 0)
                         {
                             await WriteAsync(result, blockSummary).ConfigureAwait(false);
-                            result = new List<TOutput>(_batchSize);
+                            result = new List<TOutput>(_blockOptions.BatchSize);
                         }
                     }
                     catch (Exception ex)

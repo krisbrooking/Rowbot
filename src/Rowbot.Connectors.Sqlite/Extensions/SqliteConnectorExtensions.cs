@@ -1,4 +1,5 @@
-﻿using Rowbot.Entities;
+﻿using Microsoft.Extensions.Logging;
+using Rowbot.Entities;
 using Rowbot.Pipelines.Tasks;
 
 namespace Rowbot.Connectors.Sqlite
@@ -41,11 +42,23 @@ namespace Rowbot.Connectors.Sqlite
         public static ILoadBuilderConnectorStep<TInput, SqliteWriteConnector<TInput>> TruncateTable<TInput>(
             this ILoadBuilderConnectorStep<TInput, SqliteWriteConnector<TInput>> connectorStep)
         {
-            var entity = new Entity<TInput>();
-            
-            return connectorStep.WithTask(async connector =>
+            return connectorStep.WithTask(async (connector, logger) =>
             {
-                await connector.ExecuteCommandAsync($"TRUNCATE TABLE {entity.Descriptor.Value.TableName}");
+                var entity = new Entity<TInput>();
+
+                var commandText = string.Empty;
+                if (string.IsNullOrEmpty(entity.Descriptor.Value.SchemaName))
+                {
+                    commandText = $"IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{entity.Descriptor.Value.TableName}') TRUNCATE TABLE [{entity.Descriptor.Value.TableName}];";
+                    logger.LogInformation("TRUNCATE TABLE [{tableName}]", entity.Descriptor.Value.TableName);
+                }
+                else
+                {
+                    commandText = $"IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{entity.Descriptor.Value.SchemaName}' AND TABLE_NAME = '{entity.Descriptor.Value.TableName}') TRUNCATE TABLE [{entity.Descriptor.Value.SchemaName}].[{entity.Descriptor.Value.TableName}];";
+                    logger.LogInformation("TRUNCATE TABLE [{schemaName}].[{tableName}]", entity.Descriptor.Value.SchemaName, entity.Descriptor.Value.TableName);
+                }
+
+                await connector.ExecuteCommandAsync(commandText);
             }, "Truncate Table", TaskExecutionOrder.PrePipeline, TaskPriority.High);
         }
     }

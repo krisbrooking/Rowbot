@@ -82,6 +82,11 @@ namespace Rowbot.Connectors.SqlServer
 
         public async Task<int> InsertAsync(IEnumerable<TInput> data)
         {
+            if (data.Count() == 0)
+            {
+                return 0;
+            }
+
             int rowsChanged = 0;
 
             if (Transaction.Current != null)
@@ -111,18 +116,15 @@ namespace Rowbot.Connectors.SqlServer
                 return rowsChanged;
             }
 
+            var destinationTableName = string.IsNullOrEmpty(_entity.Descriptor.Value.SchemaName)
+                ? $"[{_entity.Descriptor.Value.TableName}]"
+                : $"[{_entity.Descriptor.Value.SchemaName}].[{_entity.Descriptor.Value.TableName}]";
+
             var dataTable = ToDataTable(data);
 
             using (var bulkCopy = new SqlBulkCopy(Options.ConnectionString))
             {
-                if (string.IsNullOrEmpty(_entity.Descriptor.Value.SchemaName))
-                {
-                    bulkCopy.DestinationTableName = $"[{_entity.Descriptor.Value.TableName}]";
-                }
-                else
-                {
-                    bulkCopy.DestinationTableName = $"[{_entity.Descriptor.Value.SchemaName}].[{_entity.Descriptor.Value.TableName}]";
-                }
+                bulkCopy.DestinationTableName = destinationTableName;
                 bulkCopy.BatchSize = data.Count();
 
                 foreach (DataColumn dtColumn in dataTable.Columns)
@@ -135,11 +137,18 @@ namespace Rowbot.Connectors.SqlServer
                 rowsChanged = bulkCopy.RowsCopied;
             }
 
+            _logger.LogInformation("Rows inserted into {TableName}: {RowsChanged}", destinationTableName, rowsChanged);
+
             return rowsChanged;
         }
 
         public async Task<int> UpdateAsync(IEnumerable<RowUpdate<TInput>> data)
         {
+            if (data.Count() == 0)
+            {
+                return 0;
+            }
+
             int rowsChanged = 0;
 
             using (SqlConnection connection = new SqlConnection(Options.ConnectionString))
@@ -158,6 +167,12 @@ namespace Rowbot.Connectors.SqlServer
 
                 await connection.CloseAsync();
             }
+
+            var destinationTableName = string.IsNullOrEmpty(_entity.Descriptor.Value.SchemaName)
+                ? $"[{_entity.Descriptor.Value.TableName}]"
+                : $"[{_entity.Descriptor.Value.SchemaName}].[{_entity.Descriptor.Value.TableName}]";
+
+            _logger.LogInformation("Rows updated into {TableName}: {RowsChanged}", destinationTableName, rowsChanged);
 
             return rowsChanged;
         }
@@ -184,7 +199,7 @@ namespace Rowbot.Connectors.SqlServer
             return rowsChanged > 0;
         }
 
-        internal async Task<bool> ExecuteCommandAsync(string commandText)
+        public async Task<bool> ExecuteCommandAsync(string commandText)
         {
             int rowsChanged = 0;
 
@@ -301,34 +316,6 @@ namespace Rowbot.Connectors.SqlServer
                 {
                     commandText = commandText.Replace($"CREATE INDEX IF NOT EXISTS {indexParts[0]}", $"IF NOT EXISTS (SELECT * FROM sys.indexes WHERE [object_id] = OBJECT_ID('{schemaName}.{tableName}') AND [name] = '{indexParts[0]}') CREATE INDEX {indexParts[0]}");
                 }
-            }
-
-            return commandText;
-        }
-
-        internal string TruncateDataSetCommandText(string commandText)
-        {
-            var tableName = string.Empty;
-            var schemaName = string.Empty;
-
-            var tableAndSchemaName = commandText.Replace("TRUNCATE TABLE ", "").Split(' ').First().Split('.');
-            if (tableAndSchemaName.Length == 1)
-            {
-                tableName = tableAndSchemaName[0].Trim('[').Trim(']');
-            }
-            else
-            {
-                tableName = tableAndSchemaName[1].Trim('[').Trim(']');
-                schemaName = tableAndSchemaName[0].Trim('[').Trim(']');
-            }
-
-            if (string.IsNullOrEmpty(schemaName))
-            {
-                commandText = commandText.Replace("TRUNCATE TABLE ", $"IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{tableName}') TRUNCATE TABLE ");
-            }
-            else
-            {
-                commandText = commandText.Replace("TRUNCATE TABLE ", $"IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{schemaName}' AND TABLE_NAME = '{tableName}') TRUNCATE TABLE ");
             }
 
             return commandText;

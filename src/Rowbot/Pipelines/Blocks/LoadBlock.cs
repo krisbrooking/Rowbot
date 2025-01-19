@@ -8,19 +8,19 @@ public class LoadBlock<TInput> : IBlockTarget<TInput>
 {
     private readonly ILoader<TInput> _loader;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly BlockOptions _blockOptions;
+    private readonly LoadOptions _blockOptions;
     private int _exceptionCount;
     
     public LoadBlock(
         ILoader<TInput> loader, 
         ILoggerFactory loggerFactory,
-        BlockOptions blockOptions)
+        LoadOptions blockOptions)
     {
         _loader = loader;
         _loggerFactory = loggerFactory;
         _blockOptions = blockOptions;
 
-        var channel = Channel.CreateBounded<TInput[]>(blockOptions.BoundedCapacity);
+        var channel = Channel.CreateBounded<TInput[]>(blockOptions.ChannelBoundedCapacity);
         Reader = channel.Reader;
         WriterIn = channel.Writer;
     }

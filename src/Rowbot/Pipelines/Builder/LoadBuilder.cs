@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Rowbot.Loaders;
 using Rowbot.Loaders.Framework;
 using Rowbot.Pipelines.Blocks;
@@ -35,7 +36,7 @@ public interface ILoadBuilderConnectorStep<TInput, TConnector>
     /// to the builder.</param>
     /// <returns>Load block builder at loader/task step</returns>
     ILoadBuilderConnectorStep<TInput, TConnector> WithTask(
-        Func<TConnector, Task> task,
+        Func<TConnector, ILogger<LoadTask<TInput, TConnector>>, Task> task,
         string name = "Task",
         TaskExecutionOrder executionOrder = TaskExecutionOrder.PrePipeline, 
         TaskPriority priority = TaskPriority.Low);
@@ -52,7 +53,7 @@ public interface ILoadBuilderConnectorStep<TInput, TConnector>
     /// to the builder.</param>
     /// <returns>Load block builder at loader/task step</returns>
     ILoadBuilderConnectorStep<TInput, TConnector> WithTask(
-        Action<TConnector> task, 
+        Action<TConnector, ILogger<LoadTask<TInput, TConnector>>> task, 
         string name = "Task",
         TaskExecutionOrder executionOrder = TaskExecutionOrder.PrePipeline, 
         TaskPriority priority = TaskPriority.Low);
@@ -88,10 +89,11 @@ internal interface ILoadBuilderConnectorInternal<TInput>
     ILoadBuilderLoaderStep<TInput> AddDefaultLoader();
 }
 
-public class LoadBuilder<TInput>(PipelineBuilderContext context)
+public class LoadBuilder<TInput>(PipelineBuilderContext context, LoadOptions? loadOptions = null)
     : ILoadBuilder<TInput>
 {
     private readonly PipelineBuilderContext _context = context;
+    private readonly LoadOptions _loadOptions = loadOptions ?? new LoadOptions();
         
     public ILoadBuilderConnectorStep<TInput, TConnector> WithConnector<TConnector>(Action<TConnector>? configure = null) 
         where TConnector : IWriteConnector<TInput>
@@ -99,12 +101,13 @@ public class LoadBuilder<TInput>(PipelineBuilderContext context)
         var writeConnector = _context.ServiceFactory.CreateWriteConnector<TConnector, TInput>();
         configure?.Invoke(writeConnector);
         
-        return new LoadConnector<TInput, TConnector>(_context, writeConnector);
+        return new LoadConnector<TInput, TConnector>(_context, _loadOptions, writeConnector);
     }
 }
 
 public class LoadConnector<TInput, TConnector>(
     PipelineBuilderContext context, 
+    LoadOptions loadOptions,
     TConnector writeConnector)
     : ILoadBuilderConnectorStep<TInput, TConnector>, ILoadBuilderConnectorInternal<TInput>
     where TConnector : IWriteConnector<TInput>
@@ -115,23 +118,23 @@ public class LoadConnector<TInput, TConnector>(
     public bool HasLoader { get; private set; }
 
     public ILoadBuilderConnectorStep<TInput, TConnector> WithTask(
-        Func<TConnector, Task> task, 
+        Func<TConnector, ILogger<LoadTask<TInput, TConnector>>, Task> task,
         string name = "Task",
-        TaskExecutionOrder executionOrder = TaskExecutionOrder.PrePipeline, 
+        TaskExecutionOrder executionOrder = TaskExecutionOrder.PrePipeline,
         TaskPriority priority = TaskPriority.Low)
     {
-        _context.EnqueueTask(new LoadTask<TInput, TConnector>(_writeConnector, task, name), executionOrder, priority);
+        _context.EnqueueTask(new LoadTask<TInput, TConnector>(_writeConnector, task, _context.LoggerFactory, name), executionOrder, priority);
 
         return this;
     }
 
     public ILoadBuilderConnectorStep<TInput, TConnector> WithTask(
-        Action<TConnector> task, 
+        Action<TConnector, ILogger<LoadTask<TInput, TConnector>>> task, 
         string name = "Task",
         TaskExecutionOrder executionOrder = TaskExecutionOrder.PrePipeline, 
         TaskPriority priority = TaskPriority.Low)
     {
-        _context.EnqueueTask(new LoadTask<TInput, TConnector>(_writeConnector, task, name), executionOrder, priority);
+        _context.EnqueueTask(new LoadTask<TInput, TConnector>(_writeConnector, task, _context.LoggerFactory, name), executionOrder, priority);
 
         return this;
     }
@@ -154,7 +157,7 @@ public class LoadConnector<TInput, TConnector>(
         var loader = _context.ServiceFactory.CreateLoader<TLoader, TInput>(_writeConnector);
         configure?.Invoke(loader);
 
-        _context.Blocks.Enqueue(new LoadBlock<TInput>(loader, _context.LoggerFactory, new BlockOptions()));
+        _context.Blocks.Enqueue(new LoadBlock<TInput>(loader, _context.LoggerFactory, loadOptions));
         
         HasLoader = true;
 
@@ -163,7 +166,8 @@ public class LoadConnector<TInput, TConnector>(
             _context.PrePipelineTasks.Enqueue(
                 new LoadTask<TInput, TConnector>(
                     _writeConnector, 
-                    async connector => await ((ICreateConnector)connector).CreateDataSetAsync(), 
+                    async (connector, logger) => await ((ICreateConnector)connector).CreateDataSetAsync(), 
+                    _context.LoggerFactory,
                     "Create Data Set"),
                 priority: 1);
         }

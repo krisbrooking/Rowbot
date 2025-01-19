@@ -38,7 +38,7 @@ namespace Rowbot.IntegrationTests.Tests
                     .FromSqlite(
                         SqliteTest.ConnectionString,
                         "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
-                    10)
+                    options: new ExtractOptions(batchSize: 10))
                 .Transform(async source =>
                 {
                     await Task.Delay(DELAY);

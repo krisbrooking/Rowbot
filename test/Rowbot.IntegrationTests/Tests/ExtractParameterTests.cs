@@ -44,12 +44,17 @@ public class OrderPipelines(IPipelineBuilder pipelineBuilder, TargetData targetD
                         .Select(x => new SourceOrder { OrderId = x })
                         .ToList())
             )
-            .Extract<SourceOrderLine>(builder => builder
-                .FromList(parameters =>
+            .Extract<SourceOrderLine>((builder, input) => builder
+                .FromList(
                     Enumerable.Range(0, 5)
                         .Select(x => new SourceOrderLine
-                            { OrderLineId = x, OrderId = parameters.GetValue<int>(nameof(SourceOrder.OrderId)) })
+                            { OrderLineId = x, OrderId = input.OrderId })
                         .ToList())
+                .WithExtractor(async (context, connector) =>
+                {
+                    var id = input.OrderId;
+                    return await connector.QueryAsync(context.GetParameters());
+                })
             )
             .Transform<SourceOrderLine>(source => source)
             .Load(builder => builder
