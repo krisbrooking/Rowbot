@@ -35,39 +35,44 @@ public class LoadBlock<TInput> : IBlockTarget<TInput>
         
         return async () =>
         {
-            var workers = Enumerable.Range(0, _blockOptions.WorkerCount)
-                .Select(_ => Task.Run(async () =>
-                {
-                    var logger = _loggerFactory.CreateLogger<LoadBlock<TInput>>();
-                    var blockSummary = BlockSummaryFactory.Create<LoadBlock<TInput>>();
-
-                    await foreach (var item in Reader.ReadAllAsync().ConfigureAwait(false))
-                    {
-                        try
-                        {
-                            var result = await _loader.LoadAsync(item).ConfigureAwait(false);
-
-                            blockSummary.TotalBatches++;
-                            blockSummary.RowsInserted += result.Inserts.Count();
-                            blockSummary.RowsUpdated += result.Updates.Count();
-                        }
-                        catch (Exception ex)
-                        {
-                            blockSummary.Exceptions.TryAdd(ex.Message, (ex, blockSummary.TotalBatches));
-                            logger.LogError(ex, ex.Message);
-                            if (_exceptionCount++ == _blockOptions.MaxExceptions)
-                            {
-                                logger.LogError("Max exceptions reached, exiting worker");
-                                return;
-                            }
-                        }
-                    }
-
-                    SummaryCallback?.Invoke(blockSummary);
-                }))
-                .ToArray();
+            var workers = new List<Task>();
+            
+            for (var i = 0; i < _blockOptions.WorkerCount; i++)
+            {
+                workers.Add(RunTaskAsync());
+            }
 
             await Task.WhenAll(workers);
         };
+    }
+
+    private async Task RunTaskAsync()
+    {
+        var logger = _loggerFactory.CreateLogger<LoadBlock<TInput>>();
+        var blockSummary = BlockSummaryFactory.Create<LoadBlock<TInput>>();
+
+        await foreach (var item in Reader.ReadAllAsync().ConfigureAwait(false))
+        {
+            try
+            {
+                var result = await _loader.LoadAsync(item).ConfigureAwait(false);
+
+                blockSummary.TotalBatches++;
+                blockSummary.RowsInserted += result.Inserts.Count();
+                blockSummary.RowsUpdated += result.Updates.Count();
+            }
+            catch (Exception ex)
+            {
+                blockSummary.Exceptions.TryAdd(ex.Message, (ex, blockSummary.TotalBatches));
+                logger.LogError(ex, ex.Message);
+                if (_exceptionCount++ >= _blockOptions.MaxExceptions)
+                {
+                    logger.LogError("Max exceptions reached, exiting worker");
+                    return;
+                }
+            }
+        }
+
+        SummaryCallback?.Invoke(blockSummary);
     }
 }

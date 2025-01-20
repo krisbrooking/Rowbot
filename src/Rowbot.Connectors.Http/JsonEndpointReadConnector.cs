@@ -20,7 +20,7 @@ public sealed class JsonEndpointReadConnector<TInput, TOutput>(
 
         var requestUri = ApplyParametersToRequestUri(Options.RequestUri, parameters);
 
-        using (var httpClient = Options.HttpClientFactory(_httpClientFactory, parameters))
+        using (var httpClient = Options.HttpClientFactory(_httpClientFactory, new Uri(requestUri)))
         {
             _logger.LogInformation("HTTP GET {requestUri}", requestUri);
             var response = await httpClient.GetAsync(requestUri);

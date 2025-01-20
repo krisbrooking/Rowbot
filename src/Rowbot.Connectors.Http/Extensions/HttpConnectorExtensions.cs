@@ -16,5 +16,5 @@ public static class HttpConnectorExtensions
 public class HttpConnectorOptions
 {
     public string RequestUri { get; set; } = string.Empty;
-    public Func<IHttpClientFactory, ExtractParameter[], HttpClient> HttpClientFactory { get; set; } = (httpClientFactory, _) => httpClientFactory.CreateClient();
+    public Func<IHttpClientFactory, Uri, HttpClient> HttpClientFactory { get; set; } = (httpClientFactory, _) => httpClientFactory.CreateClient();
 }

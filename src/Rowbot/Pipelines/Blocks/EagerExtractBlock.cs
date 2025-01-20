@@ -43,64 +43,69 @@ public sealed class EagerExtractBlock<TInput, TOutput> : IBlockTarget<TInput>, I
         
         return async () =>
         {
-            var workers = Enumerable.Range(0, _blockOptions.WorkerCount)
-                .Select(_ => Task.Run(async () =>
-                {
-                    if (WriterOut is null)
-                    {
-                        return;
-                    }
-
-                    var logger = _loggerFactory.CreateLogger<EagerExtractBlock<TInput, TOutput>>();
-                    var blockSummary = BlockSummaryFactory.Create<EagerExtractBlock<TInput, TOutput>>();
-
-                    try
-                    {
-                        var result = new List<TOutput>(_blockOptions.BatchSize);
-
-                        await foreach (var items in Reader.ReadAllAsync(_cancellationToken))
-                        {
-                            foreach (var item in items)
-                            {
-                                await foreach (var output in _extractor.ExtractAsync(
-                                                   new ExtractContext<TInput>(_blockOptions.BatchSize, item, _parameters),
-                                                   _cancellationToken))
-                                {
-                                    result.Add(output);
-                                    if (result.Count == _blockOptions.BatchSize)
-                                    {
-                                        await WriteAsync(result, blockSummary).ConfigureAwait(false);
-                                        result = new List<TOutput>(_blockOptions.BatchSize);
-                                    }
-                                }
-                            }
-                        }
-
-                        if (result.Count > 0)
-                        {
-                            await WriteAsync(result, blockSummary).ConfigureAwait(false);
-                            result = new List<TOutput>(_blockOptions.BatchSize);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        blockSummary.Exceptions.TryAdd(ex.Message, (ex, blockSummary.TotalBatches));
-                        logger.LogError(ex, ex.Message);
-                        if (_exceptionCount++ == _blockOptions.MaxExceptions)
-                        {
-                            logger.LogError("Max exceptions reached, exiting worker");
-                            return;
-                        }
-                    }
-
-                    SummaryCallback?.Invoke(blockSummary);
-                }))
-                .ToArray();
+            var workers = new List<Task>();
+            
+            for (var i = 0; i < _blockOptions.WorkerCount; i++)
+            {
+                workers.Add(RunTaskAsync());
+            }
 
             await Task.WhenAll(workers)
                 .ContinueWith((_) => WriterOut?.Complete(), _cancellationToken)
                 .ConfigureAwait(false);
         };
+    }
+
+    private async Task RunTaskAsync()
+    {
+        if (WriterOut is null)
+        {
+            return;
+        }
+
+        var logger = _loggerFactory.CreateLogger<EagerExtractBlock<TInput, TOutput>>();
+        var blockSummary = BlockSummaryFactory.Create<EagerExtractBlock<TInput, TOutput>>();
+
+        var result = new List<TOutput>(_blockOptions.BatchSize);
+
+        await foreach (var items in Reader.ReadAllAsync(_cancellationToken))
+        {
+            foreach (var item in items)
+            {
+                try
+                {
+                    await foreach (var output in _extractor.ExtractAsync(
+                                       new ExtractContext<TInput>(_blockOptions.BatchSize, item, _parameters),
+                                       _cancellationToken))
+                    {
+                        result.Add(output);
+                        if (result.Count == _blockOptions.BatchSize)
+                        {
+                            await WriteAsync(result, blockSummary).ConfigureAwait(false);
+                            result = new List<TOutput>(_blockOptions.BatchSize);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    blockSummary.Exceptions.TryAdd(ex.Message, (ex, blockSummary.TotalBatches));
+                    logger.LogError(ex, ex.Message);
+                    if (_exceptionCount++ >= _blockOptions.MaxExceptions)
+                    {
+                        logger.LogError("Max exceptions reached, exiting worker");
+                        return;
+                    }
+                }
+            }
+        }
+
+        if (result.Count > 0)
+        {
+            await WriteAsync(result, blockSummary).ConfigureAwait(false);
+            result = new List<TOutput>(_blockOptions.BatchSize);
+        }
+
+        SummaryCallback?.Invoke(blockSummary);
     }
 
     private async Task WriteAsync(List<TOutput> result, BlockSummary blockSummary)
