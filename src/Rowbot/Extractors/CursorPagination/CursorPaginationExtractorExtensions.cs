@@ -44,6 +44,41 @@ public static class CursorPaginationExtractorExtensions
 
         return connectorStep.WithExtractor<CursorPaginationExtractor<TInput, TOutput, TCursor>>(extractor => extractor.Options = options);
     }
+    
+    /// <summary>
+    /// <para>
+    /// Adds the cursor pagination extractor which generates query parameters for batch size and next cursor for each query executed by the connector.
+    /// </para>
+    /// <para>
+    /// This extractor generates two extract parameters that must be included in your query.<br />
+    /// 1. Batch size. The @BatchSize parameter defaults to 1000.<br/>
+    /// 2. Cursor. The name of the cursor parameter to use in your query is the same as the selected property. E.g. for selector x => x.Id, query parameter is @Id
+    /// </para>
+    /// <para>
+    /// How to use with a SQL query:<br />
+    /// SELECT * FROM [Table] <br/>WHERE [Id] > @Id <br/>ORDER BY [Id] <br/>LIMIT @BatchSize
+    /// </para>
+    /// </summary>
+    public static IExtractBuilderExtractorStep<TInput, TOutput> WithCursorPagination<TInput, TOutput>(
+        this IExtractBuilderConnectorStep<TInput, TOutput> connectorStep, 
+        Expression<Func<TOutput, string>> cursorProperty, 
+        Action<CursorPaginationOptions<TOutput, string>>? configure = null)
+    {
+        var options = new CursorPaginationOptions<TOutput, string>();
+        configure?.Invoke(options);
+
+        if (options.Cursor is null)
+        {
+            options.Cursor = cursorProperty;
+        }
+
+        if (options.InitialValue is null)
+        {
+            options.InitialValue = " ";
+        }
+
+        return connectorStep.WithExtractor<CursorPaginationExtractor<TInput, TOutput, string>>(extractor => extractor.Options = options);
+    }
 }
 
 public class CursorPaginationOptions<TOutput, TCursor>

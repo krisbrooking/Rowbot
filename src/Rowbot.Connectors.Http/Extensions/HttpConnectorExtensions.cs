@@ -3,18 +3,36 @@ namespace Rowbot.Connectors.Http;
 public static class HttpConnectorExtensions
 {
     public static IExtractBuilderConnectorStep<TInput, TOutput> FromJsonEndpoint<TInput, TOutput>(
-        this IExtractBuilder<TInput, TOutput> builder, 
-        Action<HttpConnectorOptions> configure)
+        this IExtractBuilder<TInput, TOutput> builder,
+        string requestUri)
     {
-        var options = new HttpConnectorOptions();
-        configure?.Invoke(options);
-
-        return builder.WithConnector<JsonEndpointReadConnector<TInput, TOutput>>(connector => connector.Options = options);
+        return builder.WithConnector<JsonEndpointReadConnector<TInput, TOutput>>(connector =>
+        {
+            connector.RequestUri = requestUri;
+        });
     }
-}
-
-public class HttpConnectorOptions
-{
-    public string RequestUri { get; set; } = string.Empty;
-    public Func<IHttpClientFactory, Uri, HttpClient> HttpClientFactory { get; set; } = (httpClientFactory, _) => httpClientFactory.CreateClient();
+    
+    public static IExtractBuilderConnectorStep<TInput, TOutput> FromJsonEndpoint<TInput, TOutput>(
+        this IExtractBuilder<TInput, TOutput> builder,
+        string requestUri,
+        Action<HttpClient> configureHttpClient)
+    {
+        return builder.WithConnector<JsonEndpointReadConnector<TInput, TOutput>>(connector =>
+        {
+            connector.RequestUri = requestUri;
+            connector.HttpClientConfigurator = (httpClient, _) => configureHttpClient.Invoke(httpClient);
+        });
+    }
+    
+    public static IExtractBuilderConnectorStep<TInput, TOutput> FromJsonEndpoint<TInput, TOutput>(
+        this IExtractBuilder<TInput, TOutput> builder,
+        string requestUri,
+        Action<HttpClient, Uri> configureHttpClient)
+    {
+        return builder.WithConnector<JsonEndpointReadConnector<TInput, TOutput>>(connector =>
+        {
+            connector.RequestUri = requestUri;
+            connector.HttpClientConfigurator = configureHttpClient;
+        });
+    }
 }

@@ -22,6 +22,7 @@ namespace Rowbot.Connectors.Sqlite
             var result = new List<TOutput>();
 
             var rows = 0;
+            var errors = 0;
             using (var connection = new SqliteConnection(Options.ConnectionString))
             {
                 await connection.OpenAsync();
@@ -34,26 +35,50 @@ namespace Rowbot.Connectors.Sqlite
                     {
                         while (await reader.ReadAsync())
                         {
-                            var rowResult = Activator.CreateInstance<TOutput>();
-
-                            for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
+                            try
                             {
-                                var name = reader.GetName(ordinal);
-                                var field = _entity.Descriptor.Value.GetField(name);
-                                var mapper = _entity.Accessor.Value.GetValueMapper(field);
-                                
-                                if (!await reader.IsDBNullAsync(ordinal))
+                                var rowResult = Activator.CreateInstance<TOutput>();
+
+                                for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                                 {
-                                    mapper(SqliteCommandProvider.ConvertType(Nullable.GetUnderlyingType(field.Property.PropertyType) ?? field.Property.PropertyType, reader, ordinal), rowResult);
+                                    var name = reader.GetName(ordinal);
+                                    if (!_entity.Descriptor.Value.Fields.Any(x => string.Equals(x.Name, name)))
+                                    {
+                                        _logger.LogWarning("Row {Row}: Field {Field} returned from query but doesn't exist in entity", rows, name);
+                                    }
+                                    
+                                    var field = _entity.Descriptor.Value.GetField(name);
+                                    var mapper = _entity.Accessor.Value.GetValueMapper(field);
+
+                                    if (!field.IsNullable && reader.IsDBNull(ordinal))
+                                    {
+                                        _logger.LogError("Row {Row}: Field {Field} is not nullable but value returned from query is null", rows, field.Name);
+                                        throw new InvalidOperationException($"Field {field.Name} is not nullable but value returned from query is null");
+                                    }
+                                
+                                    if (!await reader.IsDBNullAsync(ordinal))
+                                    {
+                                        mapper(SqliteCommandProvider.ConvertType(Nullable.GetUnderlyingType(field.Property.PropertyType) ?? field.Property.PropertyType, reader, ordinal), rowResult);
+                                    }
                                 }
+                            
+                                result.Add(rowResult);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Row: {Row}: {Message} Parameters {Parameters}",
+                                    rows,
+                                    ex.Message,
+                                    string.Join(";", parameters.Select(p => $"Name: {p.ParameterName}, Value: {p.ParameterValue}")));
+                                errors++;
                             }
 
                             rows++;
-                            result.Add(rowResult);
                         }
                     }
-                    _logger.LogInformation("Query rows returned: {rows}", rows);
+                    _logger.LogInformation("Query rows returned: {rows}", rows - errors);
                     rows = 0;
+                    errors = 0;
                 }
 
                 await connection.CloseAsync();

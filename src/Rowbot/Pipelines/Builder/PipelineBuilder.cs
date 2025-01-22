@@ -23,7 +23,7 @@ public interface IPipelineBuilder
     /// <param name="builder">Returns completed extract block builder
     ///     <param name="builder arg1">Entry point for the extract block builder</param>
     /// </param>
-    /// <param name="batchSize">Number of items the extract block will process before sending to subsequent block</param>
+    /// <param name="options">Extract block options</param>
     /// <typeparam name="TOutput">Data type to extract</typeparam>
     /// <returns>Generic IPipelineBuilder</returns>
     /// <remarks>
@@ -54,7 +54,7 @@ public interface IPipelineBuilder<TPrevious, TInput>
     /// <param name="builder">Returns completed extract block builder
     ///     <param name="builder arg1">Entry point for the extract block builder</param>
     /// </param>
-    /// <param name="batchSize">Number of items the extract block will process before sending to subsequent block</param>
+    /// <param name="options">Extract block options</param>
     /// <typeparam name="TInput">Output type of the previous block</typeparam>
     /// <typeparam name="TOutput">Data type to extract</typeparam>
     /// <returns>Pipeline block</returns>
@@ -69,7 +69,7 @@ public interface IPipelineBuilder<TPrevious, TInput>
     ///     <param name="builder arg1">Entry point for the extract block builder</param>
     ///     <param name="builder arg2">Input entity instance passed through from previous extract block</param>
     /// </param>
-    /// <param name="batchSize">Number of items the extract block will process before sending to subsequent block</param>
+    /// <param name="options">Extract block options</param>
     /// <typeparam name="TInput">Output type of the previous block</typeparam>
     /// <typeparam name="TOutput">Data type to extract</typeparam>
     /// <returns>Pipeline block</returns>
@@ -82,19 +82,35 @@ public interface IPipelineBuilder<TPrevious, TInput>
     /// to another data type <typeparamref name="TOutput"/>.
     /// </summary>
     /// <param name="transform">Transformer function</param>
+    /// <param name="options">Transform block options</param>
     /// <returns>Pipeline block</returns>
     IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
         Func<TInput[], Task<TOutput[]>> transform,
         TransformOptions? options = null);
 
     /// <summary>
-    /// Adds a transform block. A transform block is used to convert from a data type <typeparamref name="TInput"/>
-    /// to another data type <typeparamref name="TOutput"/>.
+    /// Adds a transform block. A transform block is used to convert from <typeparamref name="TInput"/>
+    /// to <typeparamref name="TOutput"/>.
     /// </summary>
     /// <param name="transform">Transformer function</param>
+    /// <param name="options">Transform block options</param>
     /// <returns>Pipeline block</returns>
     IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
         Func<TInput[], TOutput[]> transform,
+        TransformOptions? options = null);
+
+    /// <summary>
+    /// <para>
+    /// Adds a transform block. A transform block is used to convert from <typeparamref name="TInput"/>
+    /// to <typeparamref name="TOutput"/>.
+    /// </para>
+    /// <para>This overload immediately converts output IEnumerable to array for input to next block.</para>
+    /// </summary>
+    /// <param name="transform">Transformer function</param>
+    /// <param name="options">Transform block options</param>
+    /// <returns>Pipeline block</returns>
+    IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
+        Func<TInput[], IEnumerable<TOutput>> transform,
         TransformOptions? options = null);
 
     /// <summary>
@@ -119,6 +135,7 @@ public interface IPipelineBuilder<TPrevious, TInput>
     /// <param name="builder">Returns completed load block builder
     ///     <param name="builder arg1">Entry point for the load block builder</param>
     /// </param>
+    /// <param name="options">Load block options</param>
     /// <returns>Completed pipeline definition</returns>
     Pipeline Load(
         Func<ILoadBuilder<TInput>, ILoadBuilderLoaderStep<TInput>> builder,
@@ -205,6 +222,18 @@ public class PipelineBuilder<TPrevious, TInput>(PipelineBuilderContext context)
     {
         var transformer = _context.ServiceFactory.CreateTransformer<Transformer<TInput, TOutput>, TInput, TOutput>();
         transformer.TransformDelegate = transform;
+        
+        _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, options ?? new TransformOptions()));
+        
+        return new PipelineBuilder<TInput, TOutput>(_context);
+    }
+
+    public IPipelineBuilder<TInput, TOutput> Transform<TOutput>(
+        Func<TInput[], IEnumerable<TOutput>> transform,
+        TransformOptions? options = null)
+    {
+        var transformer = _context.ServiceFactory.CreateTransformer<Transformer<TInput, TOutput>, TInput, TOutput>();
+        transformer.TransformDelegate = input => transform(input).ToArray();
         
         _context.Blocks.Enqueue(new TransformBlock<TInput, TOutput>(transformer, _context.LoggerFactory, options ?? new TransformOptions()));
         
