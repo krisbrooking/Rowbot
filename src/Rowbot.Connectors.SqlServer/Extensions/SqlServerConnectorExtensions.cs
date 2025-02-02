@@ -29,9 +29,9 @@ namespace Rowbot.Connectors.SqlServer
         public static ILoadBuilderConnectorStep<TInput, SqlServerWriteConnector<TInput>> ToSqlServer<TInput>(
             this ILoadBuilder<TInput> builder, 
             string connectionString, 
-            Action<SqlServerWriteConnectorOptions<TInput>>? configure = null)
+            Action<SqlServerConnectorOptions>? configure = null)
         {
-            var options = new SqlServerWriteConnectorOptions<TInput>();
+            var options = new SqlServerConnectorOptions();
             options.ConnectionString = connectionString;
             configure?.Invoke(options);
 

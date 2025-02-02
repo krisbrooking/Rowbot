@@ -40,7 +40,7 @@ namespace Rowbot.Connectors.SqlServer
                 .ToDictionary(x => x.Field, x => x.Mapper);
         }
 
-        public SqlServerWriteConnectorOptions<TInput> Options { get; set; } = new();
+        public SqlServerConnectorOptions Options { get; set; } = new();
 
         public async Task<IEnumerable<TInput>> FindAsync(
             IEnumerable<TInput> findEntities,

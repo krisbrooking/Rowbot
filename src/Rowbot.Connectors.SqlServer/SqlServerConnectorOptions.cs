@@ -15,27 +15,12 @@ namespace Rowbot.Connectors.SqlServer
         public IEnumerable<SqlCommand>? Commands { get; set; }
         public bool HasQuery => !string.IsNullOrEmpty(Query);
         public string? Query { get; set; }
-    }
-
-    public sealed class SqlServerWriteConnectorOptions<TEntity> : SqlServerConnectorOptions
-    {
-        public bool TruncateTable { get; set; }
-        internal List<SqlServerPipelineCommand> PipelineCommands { get; private set; } = new();
-        public void AddPrePipelineCommand(string command, int priority = 60)
-            => PipelineCommands.Add(new SqlServerPipelineCommand(command, priority));
-        public void AddPostPipelineCommand(string command, int priority = 101)
-            => PipelineCommands.Add(new SqlServerPipelineCommand(command, priority));
-    }
-
-    internal sealed class SqlServerPipelineCommand
-    {
-        public SqlServerPipelineCommand(string command, int priority)
-        {
-            Command = command;
-            Priority = priority;
-        }
-
-        public string Command { get; set; }
-        public int Priority { get; set; }
+        public SqlRetryLogicBaseProvider SqlRetryLogicBaseProvider { get; set; } =
+            SqlConfigurableRetryFactory.CreateExponentialRetryProvider(new SqlRetryLogicOption
+            {
+                NumberOfTries = 5,
+                DeltaTime = TimeSpan.FromSeconds(1),
+                MaxTimeInterval = TimeSpan.FromSeconds(20),
+            });
     }
 }

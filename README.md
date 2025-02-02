@@ -44,7 +44,6 @@ public class CustomerPipelines(IPipelineBuilder pipelineBuilder) : IPipeline
                     Id = customer.CustomerId, 
                     Name = customer.CustomerName
                 })
-                .ToArray()
             )
             .Load(builder => builder
                 .ToSqlite("Data Source=target.db")
@@ -103,7 +102,6 @@ public Pipeline Load() =>
                 Id = customer.CustomerId, 
                 Name = customer.CustomerName
             })
-            .ToArray()
         )
         .Load(builder => builder
             .ToSqlite("Data Source=target.db")

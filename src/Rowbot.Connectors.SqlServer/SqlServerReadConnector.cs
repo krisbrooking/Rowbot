@@ -25,6 +25,7 @@ namespace Rowbot.Connectors.SqlServer
             var errors = 0;
             using (var connection = new SqlConnection(Options.ConnectionString))
             {
+                connection.RetryLogicProvider = Options.SqlRetryLogicBaseProvider;
                 await connection.OpenAsync();
 
                 foreach (SqlCommand queryCommand in GetQueryCommands(parameters))
@@ -42,9 +43,9 @@ namespace Rowbot.Connectors.SqlServer
                                 for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                                 {
                                     var name = reader.GetName(ordinal);
-                                    if (!_entity.Descriptor.Value.Fields.Any(x => string.Equals(x.Name, name)))
+                                    if (!_entity.Descriptor.Value.Fields.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
                                     {
-                                        _logger.LogWarning("Row {Row}: Field {Field} returned from query but doesn't exist in entity", rows, name);
+                                        _logger.LogWarning("Row {Row}: Field {Field} returned from query but doesn't exist in entity {Entity}", rows, name, typeof(TOutput).Name);
                                     }
 
                                     var field = _entity.Descriptor.Value.GetField(name);
