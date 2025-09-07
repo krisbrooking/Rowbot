@@ -47,9 +47,14 @@ public sealed class EagerExtractBlock<TInput, TOutput> : IBlockTarget<TInput>, I
                 workers.Add(RunTaskAsync(cts));
             }
 
-            await Task.WhenAll(workers)
-                .ContinueWith((_) => WriterOut?.Complete(), cts.Token)
-                .ConfigureAwait(false);
+            try
+            {
+                await Task.WhenAll(workers).ConfigureAwait(false);
+            }
+            finally
+            {
+                WriterOut?.Complete();
+            }
         };
     }
 
@@ -65,7 +70,7 @@ public sealed class EagerExtractBlock<TInput, TOutput> : IBlockTarget<TInput>, I
 
         var result = new List<TOutput>(_blockOptions.BatchSize);
 
-        await foreach (var items in Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
+        await foreach (var items in Reader.ReadAllAsync().ConfigureAwait(false))
         {
             foreach (var item in items)
             {
@@ -78,7 +83,7 @@ public sealed class EagerExtractBlock<TInput, TOutput> : IBlockTarget<TInput>, I
                         result.Add(output);
                         if (result.Count == _blockOptions.BatchSize)
                         {
-                            await WriteAsync(result, blockSummary, cts.Token).ConfigureAwait(false);
+                            await WriteAsync(result, blockSummary).ConfigureAwait(false);
                             result = new List<TOutput>(_blockOptions.BatchSize);
                         }
                     }
@@ -99,22 +104,21 @@ public sealed class EagerExtractBlock<TInput, TOutput> : IBlockTarget<TInput>, I
 
         if (result.Count > 0)
         {
-            await WriteAsync(result, blockSummary, cts.Token).ConfigureAwait(false);
+            await WriteAsync(result, blockSummary).ConfigureAwait(false);
             result = new List<TOutput>(_blockOptions.BatchSize);
         }
 
         SummaryCallback?.Invoke(blockSummary);
     }
 
-    private async Task WriteAsync(List<TOutput> result, BlockSummary blockSummary, CancellationToken cancellationToken)
+    private async Task WriteAsync(List<TOutput> result, BlockSummary blockSummary)
     {
         if (WriterOut is null)
         {
             return;
         }
 
-        await WriterOut.WriteAsync(result.ToArray(), cancellationToken)
-            .ConfigureAwait(false);
+        await WriterOut.WriteAsync(result.ToArray()).ConfigureAwait(false);
 
         blockSummary.TotalBatches++;
         blockSummary.RowsExtracted += result.Count;

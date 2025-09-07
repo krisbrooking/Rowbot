@@ -51,7 +51,7 @@ public class LoadBlock<TInput> : IBlockTarget<TInput>
         var logger = _loggerFactory.CreateLogger<LoadBlock<TInput>>();
         var blockSummary = BlockSummaryFactory.Create<LoadBlock<TInput>>();
 
-        await foreach (var item in Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
+        await foreach (var item in Reader.ReadAllAsync().ConfigureAwait(false))
         {
             try
             {

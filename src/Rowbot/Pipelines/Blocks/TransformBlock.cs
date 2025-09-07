@@ -58,9 +58,14 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
                 workers.Add(RunTaskAsync(cts));
             }
 
-            await Task.WhenAll(workers)
-                .ContinueWith((_) => WriterOut?.Complete(), cts.Token)
-                .ConfigureAwait(false);
+            try
+            {
+                await Task.WhenAll(workers).ConfigureAwait(false);
+            }
+            finally
+            {
+                WriterOut?.Complete();
+            }
         };
     }
 
@@ -69,7 +74,7 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
         var logger = _loggerFactory.CreateLogger<TransformBlock<TInput, TOutput>>();
         var blockSummary = BlockSummaryFactory.Create<TransformBlock<TInput, TOutput>>();
 
-        await foreach (var item in Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
+        await foreach (var item in Reader.ReadAllAsync().ConfigureAwait(false))
         {
             try
             {
@@ -82,7 +87,7 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
                             
                 if (WriterOut != null)
                 {
-                    await WriterOut.WriteAsync(result, cts.Token).ConfigureAwait(false);
+                    await WriterOut.WriteAsync(result).ConfigureAwait(false);
 
                     blockSummary.TotalBatches++;
                     blockSummary.RowsTransformed += result.Count();
