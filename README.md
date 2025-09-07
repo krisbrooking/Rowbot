@@ -1,14 +1,29 @@
 ﻿# Rowbot
 
 Rowbot is a data pipeline framework for the .NET developer. It provides a simple, fluent api to extract, transform, 
-and load data.
+and load data. It includes a builder that ensures pipelines are authored correctly and consistently, and a runner 
+that is responsible for executing them in the correct order.
 
-Rowbot includes a builder that ensures pipelines are authored correctly and consistently, and a runner that is 
-responsible for executing them in the correct order. The framework encourages the creation of many small pipelines 
-which become the building blocks for more complicated ones. 
+## Why Rowbot?
 
-Rowbot is designed to be extensible; custom-built components plug into the pipeline builder exactly the same way as 
+Rowbot is an opinionated framework that intentionally trades flexibility for simplicity. Rowbot encourages the creation 
+of many small pipelines; larger pipelines are built by combining smaller ones.
+
+### Designed for developers
+
+The fluent pipeline builder makes it quick and easy to move data from a source to a target system. With Rowbot, **pipelines
+are code**, there is no graphical designer or reporting tool included. By default, the pipeline runner outputs to the console.
+
+### Simple to extend
+
+Rowbot is **designed to be extensible**. Custom components plug into the pipeline builder in exactly the same way as 
 built-in components do. Extensions like custom data source connectors are simple to build and integrate into the api.
+
+### Unit testable
+
+Rowbot abstracts data extract and load so that the pipeline developer can focus on data transformation. Typically,
+ **data transformation is a single C# method** with an input array and an output array, making the logic 
+ easily testable.
 
 ## Get Started
 A pipeline is created using `IPipelineBuilder`, a fluent builder that provides methods for extracting, transforming, 

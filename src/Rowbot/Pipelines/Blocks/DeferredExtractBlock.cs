@@ -12,21 +12,18 @@ public sealed class DeferredExtractBlock<TInput, TOutput> : IBlockTarget<TInput>
     private readonly ServiceFactory _serviceFactory;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ExtractOptions _blockOptions;
-    private readonly CancellationToken _cancellationToken;
     private int _exceptionCount;
 
     public DeferredExtractBlock(
         Func<IExtractBuilder<TInput, TOutput>, TInput, IExtractBuilderExtractorStep<TInput, TOutput>> extractBuilder, 
         ServiceFactory serviceFactory,
         ILoggerFactory loggerFactory, 
-        ExtractOptions blockOptions,
-        CancellationToken token = default)
+        ExtractOptions blockOptions)
     {
         _extractBuilder = extractBuilder;
         _serviceFactory = serviceFactory;
         _loggerFactory = loggerFactory;
         _blockOptions = blockOptions;
-        _cancellationToken = token;
 
         var channel = Channel.CreateBounded<TInput[]>(blockOptions.ChannelBoundedCapacity);
         Reader = channel.Reader;
@@ -38,26 +35,26 @@ public sealed class DeferredExtractBlock<TInput, TOutput> : IBlockTarget<TInput>
     public ChannelWriter<TOutput[]>? WriterOut { get; private set; }
     public Action<BlockSummary>? SummaryCallback { get; set; }
 
-    public Func<Task> PrepareTask()
+    public Func<CancellationTokenSource, Task> PrepareTask()
     {
         _exceptionCount = 0;
         
-        return async () =>
+        return async (cts) =>
         {
             var workers = new List<Task>();
             
             for (var i = 0; i < _blockOptions.WorkerCount; i++)
             {
-                workers.Add(RunTaskAsync());
+                workers.Add(RunTaskAsync(cts));
             }
 
             await Task.WhenAll(workers)
-                .ContinueWith((_) => WriterOut?.Complete(), _cancellationToken)
+                .ContinueWith((_) => WriterOut?.Complete(), cts.Token)
                 .ConfigureAwait(false);
         };
     }
 
-    private async Task RunTaskAsync()
+    private async Task RunTaskAsync(CancellationTokenSource cts)
     {
         if (WriterOut is null)
         {
@@ -72,7 +69,7 @@ public sealed class DeferredExtractBlock<TInput, TOutput> : IBlockTarget<TInput>
 
         var result = new List<TOutput>(_blockOptions.BatchSize);
 
-        await foreach (var items in Reader.ReadAllAsync(_cancellationToken))
+        await foreach (var items in Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
         {
             foreach (var item in items)
             {
@@ -89,13 +86,13 @@ public sealed class DeferredExtractBlock<TInput, TOutput> : IBlockTarget<TInput>
                     var extractConnector = (DeferredExtractConnector<TInput, TOutput>)connectorStep;
 
                     await foreach (var output in extractConnector.Extractor!.ExtractAsync(
-                                       new ExtractContext<TInput>(_blockOptions.BatchSize, item, extractConnector.Parameters),
-                                       _cancellationToken))
+                        new ExtractContext<TInput>(_blockOptions.BatchSize, item, extractConnector.Parameters),
+                        cts.Token).ConfigureAwait(false))
                     {
                         result.Add(output);
                         if (result.Count == _blockOptions.BatchSize)
                         {
-                            await WriteAsync(result, blockSummary).ConfigureAwait(false);
+                            await WriteAsync(result, blockSummary, cts.Token).ConfigureAwait(false);
                             result = new List<TOutput>(_blockOptions.BatchSize);
                         }
                     }
@@ -107,7 +104,8 @@ public sealed class DeferredExtractBlock<TInput, TOutput> : IBlockTarget<TInput>
                     if (_exceptionCount++ >= _blockOptions.MaxExceptions)
                     {
                         logger.LogError("Max exceptions reached, exiting worker");
-                        return;
+                        cts.Cancel();
+                        break;
                     }
                 }
             }
@@ -115,21 +113,21 @@ public sealed class DeferredExtractBlock<TInput, TOutput> : IBlockTarget<TInput>
 
         if (result.Count > 0)
         {
-            await WriteAsync(result, blockSummary).ConfigureAwait(false);
+            await WriteAsync(result, blockSummary, cts.Token).ConfigureAwait(false);
             result = new List<TOutput>(_blockOptions.BatchSize);
         }
 
         SummaryCallback?.Invoke(blockSummary);
     }
 
-    private async Task WriteAsync(List<TOutput> result, BlockSummary blockSummary)
+    private async Task WriteAsync(List<TOutput> result, BlockSummary blockSummary, CancellationToken cancellationToken)
     {
         if (WriterOut is null)
         {
             return;
         }
         
-        await WriterOut.WriteAsync(result.ToArray(), _cancellationToken)
+        await WriterOut.WriteAsync(result.ToArray(), cancellationToken)
             .ConfigureAwait(false);
 
         blockSummary.TotalBatches++;

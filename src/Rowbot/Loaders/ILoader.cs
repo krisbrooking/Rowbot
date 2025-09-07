@@ -15,7 +15,7 @@ public interface ILoader<TInput>
     /// </summary>
     /// <param name="data">Array of entities to load</param>
     /// <returns>Load result containing entities inserted and updated</returns>
-    Task<LoadResult<TInput>> LoadAsync(TInput[] data);
+    Task<LoadResult<TInput>> LoadAsync(TInput[] data, CancellationToken cancellationToken = default);
     /// <summary>
     /// The write connector to be extended.
     /// </summary>

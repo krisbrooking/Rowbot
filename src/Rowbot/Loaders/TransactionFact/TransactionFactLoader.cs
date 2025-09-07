@@ -14,13 +14,18 @@ public sealed class TransactionFactLoader<TInput>(
 
     public IWriteConnector<TInput>? Connector { get; set; }
 
-    public async Task<LoadResult<TInput>> LoadAsync(TInput[] data)
+    public async Task<LoadResult<TInput>> LoadAsync(TInput[] data, CancellationToken cancellationToken = default)
     {
         if (Connector is null)
         {
             throw new InvalidOperationException("Write connector is not configured");
         }
-        
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new LoadResult<TInput>(Enumerable.Empty<TInput>(), Enumerable.Empty<RowUpdate<TInput>>());
+        }
+
         return await ApplyFacts(Connector, data);
     }
 

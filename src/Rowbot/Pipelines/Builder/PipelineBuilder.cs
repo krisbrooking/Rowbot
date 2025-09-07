@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using Rowbot.Null;
 using Rowbot.Pipelines.Blocks;
 using Rowbot.Pipelines.Builder;
+using System.Linq.Expressions;
 
 namespace Rowbot;
 
@@ -130,6 +132,22 @@ public interface IPipelineBuilder<TPrevious, TInput>
     IPipelineBuilder<TInput, TInput> Apply(Action<MapperConfiguration<TInput, TInput>> mapper);
 
     /// <summary>
+    /// Adds a test block. Test executes a predicate against each item and logs on failure. The test block does not
+    /// transform the item.
+    /// </summary>
+    /// <param name="testPredicate">The predicate to execute</param>
+    /// <param name="testIdentifierSelector">The property to identify the item from the log</param>
+    /// <param name="logLevel">Log level</param>
+    /// <param name="maxLogCount">Limits the number of logs produced</param>
+    /// <typeparam name="TProperty">The identifier property type</typeparam>
+    /// <returns>Pipeline block</returns>
+    IPipelineBuilder<TInput, TInput> Test<TProperty>(
+        Expression<Func<TInput, bool>> testPredicate,
+        Expression<Func<TInput, TProperty>> testIdentifierSelector,
+        LogLevel logLevel = LogLevel.Warning,
+        int maxLogCount = 10);
+
+    /// <summary>
     /// Adds a load block. A load block uses a write connector and a loader to push data to a destination.
     /// </summary>
     /// <param name="builder">Returns completed load block builder
@@ -177,7 +195,9 @@ public class PipelineBuilder<TPrevious, TInput>(PipelineBuilderContext context)
     : IPipelineBuilder<TPrevious, TInput>
 {
     private readonly PipelineBuilderContext _context = context;
-    
+
+    internal PipelineBuilderContext Context => _context;
+
     public IPipelineBuilder<TInput, TOutput> Extract<TOutput>(
         Func<IExtractBuilder<TInput, TOutput>, IExtractBuilderExtractorStep<TInput, TOutput>> builder,
         ExtractOptions? options = null)
@@ -256,6 +276,20 @@ public class PipelineBuilder<TPrevious, TInput>(PipelineBuilderContext context)
     public IPipelineBuilder<TInput, TInput> Apply(Action<MapperConfiguration<TInput, TInput>> mapper) => 
         Apply<TInput>(mapper);
 
+    public IPipelineBuilder<TInput, TInput> Test<TProperty>(
+        Expression<Func<TInput, bool>> testPredicate,
+        Expression<Func<TInput, TProperty>> testIdentifierSelector,
+        LogLevel logLevel = LogLevel.Warning,
+        int maxLogCount = 10)
+    {
+        var transformer = _context.ServiceFactory.CreateTransformer<TestTransformer<TInput, TInput, TProperty>, TInput, TInput>();
+        transformer.Init(testPredicate, testIdentifierSelector, _context.LoggerFactory, logLevel, maxLogCount);
+
+        _context.Blocks.Enqueue(new TransformBlock<TInput, TInput>(transformer, _context.LoggerFactory, new TransformOptions()));
+
+        return new PipelineBuilder<TInput, TInput>(_context);
+    }
+
     public Pipeline Load(
         Func<ILoadBuilder<TInput>, ILoadBuilderLoaderStep<TInput>> builder,
         LoadOptions? options = null)
@@ -270,9 +304,31 @@ public class PipelineBuilder<TPrevious, TInput>(PipelineBuilderContext context)
             connectorStep.AddDefaultLoader();
         }
 
-        var context = _context.Clone();
+        var contextClone = _context.Clone();
         _context.Reset();
 
-        return new Pipeline(context);
+        return new Pipeline(contextClone);
+    }
+}
+
+public static class PipelineBuilderExtensions
+{
+    public static Pipeline Ensure<TInput>(
+        this IPipelineBuilder<TInput, TInput> pipelineBuilder,
+        Expression<Func<TInput, bool>> testPredicate)
+        where TInput : ITestResult
+    {
+        if (pipelineBuilder is not PipelineBuilder<TInput, TInput> pipelineBuilderInternal)
+        {
+            throw new ArgumentException();
+        }
+
+        var transformer = pipelineBuilderInternal.Context.ServiceFactory.CreateTransformer<EnsureTransformer<TInput, TInput>, TInput, TInput>();
+        transformer.PredicateBody = testPredicate.Body.ToString();
+        transformer.Predicate = testPredicate.Compile();
+
+        pipelineBuilderInternal.Context.Blocks.Enqueue(new TransformBlock<TInput, TInput>(transformer, pipelineBuilderInternal.Context.LoggerFactory, new TransformOptions()));
+
+        return pipelineBuilder.Load(builder => builder.WithConnector<NullWriteConnector<TInput>>());
     }
 }

@@ -19,8 +19,8 @@ namespace Rowbot.IntegrationTests.Tests
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
             await SqliteTest.WriteRowsAsync(SecondSourceCustomer.GetValidEntities(10));
 
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
-            await ExecutePipelinesAsync(typeof(SecondCustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
+            await PipelineTest.RunPipelinesAsync<SecondCustomerPipeline>().RunAsync();
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(20, rows.Count());
@@ -32,12 +32,12 @@ namespace Rowbot.IntegrationTests.Tests
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
             await SqliteTest.WriteRowsAsync(SecondSourceCustomer.GetValidEntities(10));
 
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
-            await ExecutePipelinesAsync(typeof(SecondCustomerWithMapperPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
+            await PipelineTest.RunPipelinesAsync<SecondCustomerWithMapperPipeline>().RunAsync();
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(19, rows.Count());
-            Assert.Single(rows.Where(x => x.Id == 1));
+            Assert.Single(rows, x => x.Id == 1);
         }
 
         [Fact]
@@ -46,25 +46,18 @@ namespace Rowbot.IntegrationTests.Tests
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
             await SqliteTest.WriteRowsAsync(SecondSourceCustomer.GetValidEntities(10));
 
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
-            await ExecutePipelinesAsync(typeof(SecondCustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
+            await PipelineTest.RunPipelinesAsync<SecondCustomerPipeline>().RunAsync();
             var originalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
-            await ExecutePipelinesAsync(typeof(SecondCustomerWithMapperPipeline));
+            await PipelineTest.RunPipelinesAsync<SecondCustomerWithMapperPipeline>().RunAsync();
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(20, originalRows.Count());
             Assert.Equal(2, originalRows.Count(x => x.IntegrationId == 1 && x.IsActive));
             Assert.Equal(20, finalRows.Count());
-            Assert.Single(finalRows.Where(x => x.Id == 1 && x.IntegrationId == 1 && x.Source == 1 && x.IsActive));
-            Assert.Single(finalRows.Where(x => x.Id == 1 && x.IntegrationId == 1 && x.Source == 1 && !x.IsActive));
-        }
-
-        private async Task<IEnumerable<PipelineSummary>> ExecutePipelinesAsync(params Type[] pipelines)
-        {
-            return await SqliteTest
-                .BuildRunner(pipelines)
-                .RunAsync();
+            Assert.Single(finalRows, x => x.Id == 1 && x.IntegrationId == 1 && x.Source == 1 && x.IsActive);
+            Assert.Single(finalRows, x => x.Id == 1 && x.IntegrationId == 1 && x.Source == 1 && !x.IsActive);
         }
 
         public class CustomerPipeline(IPipelineBuilder pipelineBuilder) : IPipeline
@@ -72,11 +65,12 @@ namespace Rowbot.IntegrationTests.Tests
             public Pipeline Load() =>
                 pipelineBuilder
                     .Extract<SourceCustomer>(builder => builder
-                        .FromSqlite(
-                            SqliteTest.ConnectionString,
-                            "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
+                        .FromSqlite(SqliteTest.ConnectionString, "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
                         options: new ExtractOptions(batchSize: 10))
-                    .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                    .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                    .Apply<Customer>(mapper => mapper
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).Include(x => x.Id), x => x.KeyHash)
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).All(), x => x.ChangeHash))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
                         .WithSlowlyChangingDimension());
@@ -87,11 +81,12 @@ namespace Rowbot.IntegrationTests.Tests
             public Pipeline Load() =>
                 pipelineBuilder
                     .Extract<SecondSourceCustomer>(builder => builder
-                        .FromSqlite(
-                            SqliteTest.ConnectionString,
-                            "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SecondSourceCustomer]"),
+                        .FromSqlite(SqliteTest.ConnectionString, "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SecondSourceCustomer]"),
                         options: new ExtractOptions(batchSize: 10))
-                    .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                    .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                    .Apply<Customer>(mapper => mapper
+                        .Transform.ToHashCode(hash => hash.WithSeed(2).Include(x => x.Id), x => x.KeyHash)
+                        .Transform.ToHashCode(hash => hash.WithSeed(2).All(), x => x.ChangeHash))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
                         .WithSlowlyChangingDimension());
@@ -120,7 +115,10 @@ namespace Rowbot.IntegrationTests.Tests
 	                            source.[CustomerId] IS NULL
                             "),
                         options: new ExtractOptions(batchSize: 10))
-                    .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                    .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                    .Apply<Customer>(mapper => mapper
+                        .Transform.ToHashCode(hash => hash.WithSeed(2).Include(x => x.Id), x => x.KeyHash)
+                        .Transform.ToHashCode(hash => hash.WithSeed(2).All(), x => x.ChangeHash))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
                         .WithSlowlyChangingDimension());
@@ -148,7 +146,7 @@ namespace Rowbot.IntegrationTests.Tests
 	                            customer.[Source] = 2 AND
 	                            (second.[CustomerId] IS NULL OR mapping.[SourceCustomerId] IS NOT NULL)"),
                         options: new ExtractOptions(batchSize: 10))
-                    .Transform<Customer>(source => 
+                    .Transform<Customer>(source =>
                         source.Select(x => new Customer()
                         {
                             Source = 1,

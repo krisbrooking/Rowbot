@@ -17,8 +17,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(25));
 
-            var result = await SqliteTest
-                .BuildRunner(typeof(CustomerPipelines))
+            var result = await PipelineTest.RunPipelinesAsync<CustomerPipelines>()
                 .RunAsync(pipelines => pipelines.FilterByTag("CursorPagination"));
 
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
@@ -32,8 +31,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             await SqliteTest.WriteRowsAsync(Enumerable.Empty<SourceCustomer>());
 
-            await SqliteTest
-                .BuildRunner(typeof(CustomerPipelines))
+            var result = await PipelineTest.RunPipelinesAsync<CustomerPipelines>()
                 .RunAsync(pipelines => pipelines.FilterByTag("CursorPagination"));
 
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
@@ -46,8 +44,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(25));
 
-            var result = await SqliteTest
-                .BuildRunner(typeof(CustomerPipelines))
+            var result = await PipelineTest.RunPipelinesAsync<CustomerPipelines>()
                 .RunAsync(pipelines => pipelines.FilterByTag("OffsetPagination"));
 
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
@@ -61,8 +58,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             await SqliteTest.WriteRowsAsync(Enumerable.Empty<SourceCustomer>());
 
-            await SqliteTest
-                .BuildRunner(typeof(CustomerPipelines))
+            var result = await PipelineTest.RunPipelinesAsync<CustomerPipelines>()
                 .RunAsync(pipelines => pipelines.FilterByTag("OffsetPagination"));
 
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
@@ -81,7 +77,10 @@ namespace Rowbot.IntegrationTests.Tests
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer] WHERE [CustomerId] > @CustomerId ORDER BY [CustomerId] LIMIT @BatchSize")
                         .WithCursorPagination(x => x.CustomerId),
                         options: new ExtractOptions(batchSize: 10))
-                    .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                    .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                    .Apply<Customer>(mapper => mapper
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).Include(x => x.Id), x => x.KeyHash)
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).All(), x => x.ChangeHash))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString));
 
@@ -94,7 +93,10 @@ namespace Rowbot.IntegrationTests.Tests
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer] ORDER BY [CustomerId] LIMIT @BatchSize OFFSET @Offset")
                         .WithOffsetPagination(),
                         options: new ExtractOptions(batchSize: 10))
-                    .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                    .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                    .Apply<Customer>(mapper => mapper
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).Include(x => x.Id), x => x.KeyHash)
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).All(), x => x.ChangeHash))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString));
         }

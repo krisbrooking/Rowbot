@@ -11,46 +11,43 @@ public sealed class PrimaryExtractBlock<TInput, TOutput> : IBlockSource<TOutput>
     private readonly ILoggerFactory _loggerFactory;
     private readonly ExtractParameter[] _parameters;
     private readonly ExtractOptions _blockOptions;
-    private readonly CancellationToken _cancellationToken;
     private int _exceptionCount;
 
     public PrimaryExtractBlock(
         IExtractor<TInput, TOutput> extractor, 
         ILoggerFactory loggerFactory,
         ExtractParameter[] parameters,
-        ExtractOptions blockOptions,
-        CancellationToken token = default)
+        ExtractOptions blockOptions)
     {
         _extractor = extractor;
         _loggerFactory = loggerFactory;
         _parameters = parameters;
         _blockOptions = blockOptions;
-        _cancellationToken = token;
     }
 
     public ChannelWriter<TOutput[]>? WriterOut { get; private set; }
     public Action<BlockSummary>? SummaryCallback { get; set; }
 
-    public Func<Task> PrepareTask()
+    public Func<CancellationTokenSource, Task> PrepareTask()
     {
         _exceptionCount = 0;
         
-        return async () =>
+        return async (cts) =>
         {
             var workers = new List<Task>();
             
             for (var i = 0; i < _blockOptions.WorkerCount; i++)
             {
-                workers.Add(RunTaskAsync());
+                workers.Add(RunTaskAsync(cts));
             }
 
             await Task.WhenAll(workers)
-                .ContinueWith((_) => WriterOut?.Complete(), _cancellationToken)
+                .ContinueWith((_) => WriterOut?.Complete(), cts.Token)
                 .ConfigureAwait(false);
         };
     }
 
-    private async Task RunTaskAsync()
+    private async Task RunTaskAsync(CancellationTokenSource cts)
     {
         if (WriterOut is null)
         {
@@ -64,19 +61,19 @@ public sealed class PrimaryExtractBlock<TInput, TOutput> : IBlockSource<TOutput>
         {
             var result = new List<TOutput>(_blockOptions.BatchSize);
 
-            await foreach (var output in _extractor.ExtractAsync(new ExtractContext<TInput>(_blockOptions.BatchSize, _parameters), _cancellationToken))
+            await foreach (var output in _extractor.ExtractAsync(new ExtractContext<TInput>(_blockOptions.BatchSize, _parameters), cts.Token).ConfigureAwait(false))
             {
                 result.Add(output);
                 if (result.Count == _blockOptions.BatchSize)
                 {
-                    await WriteAsync(result, blockSummary).ConfigureAwait(false);
+                    await WriteAsync(result, blockSummary, cts.Token).ConfigureAwait(false);
                     result = new List<TOutput>(_blockOptions.BatchSize);
                 }
             }
 
             if (result.Count > 0)
             {
-                await WriteAsync(result, blockSummary).ConfigureAwait(false);
+                await WriteAsync(result, blockSummary, cts.Token).ConfigureAwait(false);
                 result = new List<TOutput>(_blockOptions.BatchSize);
             }
         }
@@ -87,21 +84,21 @@ public sealed class PrimaryExtractBlock<TInput, TOutput> : IBlockSource<TOutput>
             if (_exceptionCount++ >= _blockOptions.MaxExceptions)
             {
                 logger.LogError("Max exceptions reached, exiting worker");
-                return;
+                cts.Cancel();
             }
         }
 
         SummaryCallback?.Invoke(blockSummary);
     }
 
-    private async Task WriteAsync(List<TOutput> result, BlockSummary blockSummary)
+    private async Task WriteAsync(List<TOutput> result, BlockSummary blockSummary, CancellationToken cancellationToken)
     {
         if (WriterOut is null)
         {
             return;
         }
         
-        await WriterOut.WriteAsync(result.ToArray(), _cancellationToken)
+        await WriterOut.WriteAsync(result.ToArray(), cancellationToken)
             .ConfigureAwait(false);
 
         blockSummary.TotalBatches++;

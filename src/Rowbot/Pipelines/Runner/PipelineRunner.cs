@@ -128,7 +128,7 @@ public sealed class PipelineRunner(
 
             pipelineSummaries = result.SelectMany(x => x).ToList();
         }
-        catch
+        catch (Exception ex)
         {
             if (aggregationTask?.Exception?.InnerExceptions != null && 
                 aggregationTask.Exception.InnerExceptions.Any())
@@ -138,6 +138,8 @@ public sealed class PipelineRunner(
                     _logger.LogError(innerEx, innerEx.Message);
                 }
             }
+
+            _logger.LogError(ex, ex.Message);
         }
 
         foreach (var summaryOutput in _summaryOutputs)

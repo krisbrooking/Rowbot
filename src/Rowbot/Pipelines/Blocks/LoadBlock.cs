@@ -29,33 +29,33 @@ public class LoadBlock<TInput> : IBlockTarget<TInput>
     public ChannelReader<TInput[]> Reader { get; }
     public Action<BlockSummary>? SummaryCallback { get; set; }
 
-    public Func<Task> PrepareTask()
+    public Func<CancellationTokenSource, Task> PrepareTask()
     {
         _exceptionCount = 0;
         
-        return async () =>
+        return async (cts) =>
         {
             var workers = new List<Task>();
             
             for (var i = 0; i < _blockOptions.WorkerCount; i++)
             {
-                workers.Add(RunTaskAsync());
+                workers.Add(RunTaskAsync(cts));
             }
 
             await Task.WhenAll(workers);
         };
     }
 
-    private async Task RunTaskAsync()
+    private async Task RunTaskAsync(CancellationTokenSource cts)
     {
         var logger = _loggerFactory.CreateLogger<LoadBlock<TInput>>();
         var blockSummary = BlockSummaryFactory.Create<LoadBlock<TInput>>();
 
-        await foreach (var item in Reader.ReadAllAsync().ConfigureAwait(false))
+        await foreach (var item in Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
         {
             try
             {
-                var result = await _loader.LoadAsync(item).ConfigureAwait(false);
+                var result = await _loader.LoadAsync(item, cts.Token).ConfigureAwait(false);
 
                 blockSummary.TotalBatches++;
                 blockSummary.RowsInserted += result.Inserts.Count();
@@ -68,7 +68,8 @@ public class LoadBlock<TInput> : IBlockTarget<TInput>
                 if (_exceptionCount++ >= _blockOptions.MaxExceptions)
                 {
                     logger.LogError("Max exceptions reached, exiting worker");
-                    return;
+                    cts.Cancel();
+                    break;
                 }
             }
         }

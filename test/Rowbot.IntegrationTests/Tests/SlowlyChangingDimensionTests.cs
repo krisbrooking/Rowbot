@@ -8,7 +8,7 @@ namespace Rowbot.IntegrationTests.Tests
     [Collection("IntegrationTests")]
     public class SlowlyChangingDimensionTests
     {
-        public SlowlyChangingDimensionTests() 
+        public SlowlyChangingDimensionTests()
         {
             SqliteTest.Reset();
         }
@@ -18,8 +18,8 @@ namespace Rowbot.IntegrationTests.Tests
         {
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(1));
 
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
 
@@ -31,7 +31,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer with Inactive = false
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5).AssignWhere(x => x.CustomerId == 1, x => x.Inactive, false));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             var originalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.False(originalRows.First(x => x.Id == 1).Inactive);
@@ -39,7 +39,7 @@ namespace Rowbot.IntegrationTests.Tests
             // Drop SourceCustomer table and reseed with the same customer except Inactive = true, then load
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5).AssignWhere(x => x.CustomerId == 1, x => x.Inactive, true));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(5, finalRows.Count());
@@ -52,7 +52,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer with Name = "ABC Corp"
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5).AssignWhere(x => x.CustomerId == 5, x => x.CustomerName, "ABC Corp"));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             var originalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal("ABC Corp", originalRows.First(x => x.Id == 5).Name);
@@ -60,7 +60,7 @@ namespace Rowbot.IntegrationTests.Tests
             // Drop SourceCustomer table and reseed with the same customer except CustomerName = "XYZ Corp", then load
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5).AssignWhere(x => x.CustomerId == 5, x => x.CustomerName, "XYZ Corp"));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(6, finalRows.Count());
@@ -76,7 +76,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer with Name = "ABC Corp"
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(1).Assign(x => x.CustomerName, "ABC Corp"));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             var originalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal("ABC Corp", originalRows.First().Name);
@@ -87,18 +87,18 @@ namespace Rowbot.IntegrationTests.Tests
             {
                 SqliteTest.Reset(nameof(SourceCustomer));
                 await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(1).Assign(x => x.CustomerName, new string(Enumerable.Range(0, 101).Select(x => '0').ToArray())));
-                await ExecutePipelinesAsync(typeof(CustomerPipeline));
+                await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             }
             catch { }
 
             // Drop SourceCustomer table with Name = "XYZ Corp" (valid data). Dimension state is corrected by inserting the new row.
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(1).Assign(x => x.CustomerName, "XYZ Corp"));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(2, finalRows.Count());
-            Assert.Single(finalRows.Where(x => x.IsActive));
+            Assert.Single(finalRows, x => x.IsActive);
             Assert.NotNull(finalRows.First(x => !x.IsActive).ToDate);
             Assert.Null(finalRows.First(x => x.IsActive).ToDate);
             Assert.Equal(finalRows.First().KeyHash, finalRows.Last().KeyHash);
@@ -109,12 +109,12 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             // Drop SourceCustomer table and reseed with fewer rows (simulating rows deleted at source)
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(5, finalRows.Count(x => x.Id > 5 && x.IsDeleted && x.ToDate is not null));
@@ -125,17 +125,17 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             // Drop SourceCustomer table and reseed with fewer rows (simulating rows deleted at source)
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             // Drop SourceCustomer table and reseed with original data (simulating transient issue at source)
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
@@ -147,12 +147,12 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             // Drop SourceCustomer table and reseed with fewer rows (simulating rows deleted at source)
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5));
-            await ExecutePipelinesAsync(typeof(CustomerPipelineOverrideDeleteWithIsActiveFalse));
+            await PipelineTest.RunPipelinesAsync<CustomerPipelineOverrideDeleteWithIsActiveFalse>().RunAsync();
 
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
@@ -164,16 +164,16 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             // Drop SourceCustomer table and reseed with fewer rows (simulating rows deleted at source)
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5));
-            await ExecutePipelinesAsync(typeof(CustomerPipelineOverrideDeleteWithIsActiveFalse));
+            await PipelineTest.RunPipelinesAsync<CustomerPipelineOverrideDeleteWithIsActiveFalse>().RunAsync();
 
             // Drop SourceCustomer table and reseed with original data (simulating transient issue at source)
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
@@ -186,22 +186,17 @@ namespace Rowbot.IntegrationTests.Tests
         {
             // Seed the customer
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
-            await ExecutePipelinesAsync(typeof(CustomerPipeline));
+            await PipelineTest.RunPipelinesAsync<CustomerPipeline>(services => services.AddSqliteConnector()).RunAsync();
 
             // Drop SourceCustomer table and reseed with fewer rows (simulating rows deleted at source)
             SqliteTest.Reset(nameof(SourceCustomer));
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(5));
-            await ExecutePipelinesAsync(typeof(CustomerPipelineOverrideDeleteWithIsActiveFalse));
+            await PipelineTest.RunPipelinesAsync<CustomerPipelineOverrideDeleteWithIsActiveFalse>().RunAsync();
 
             var finalRows = await SqliteTest.ReadRowsAsync<Customer>();
 
             Assert.Equal(5, finalRows.Count(x => x.Id > 5 && x.Inactive));
         }
-
-        private async Task<IEnumerable<PipelineSummary>> ExecutePipelinesAsync(params Type[] pipelines) =>
-            await SqliteTest
-                .BuildRunner(pipelines)
-                .RunAsync();
 
         public class CustomerPipeline(IPipelineBuilder pipelineBuilder) : IPipeline
         {
@@ -212,7 +207,10 @@ namespace Rowbot.IntegrationTests.Tests
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
                         options: new ExtractOptions(batchSize: 10))
-                    .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                    .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                    .Apply<Customer>(mapper => mapper
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).Include(x => x.Id), x => x.KeyHash)
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).All(), x => x.ChangeHash))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
                         .WithSlowlyChangingDimension());
@@ -233,7 +231,7 @@ namespace Rowbot.IntegrationTests.Tests
 	                            customer.[IsDeleted] = 0 AND
 	                            source.[CustomerId] IS NULL"),
                         options: new ExtractOptions(batchSize: 10))
-                    .Transform<Customer>(source => 
+                    .Transform<Customer>(source =>
                         source.Select(x => new Customer()
                         {
                             Id = x.Id,
@@ -264,7 +262,7 @@ namespace Rowbot.IntegrationTests.Tests
 	                            customer.[IsDeleted] = 0 AND
 	                            source.[CustomerId] IS NULL"),
                         options: new ExtractOptions(batchSize: 10))
-                    .Transform<Customer>(source => 
+                    .Transform<Customer>(source =>
                         source.Select(x => new Customer()
                         {
                             Id = x.Id,

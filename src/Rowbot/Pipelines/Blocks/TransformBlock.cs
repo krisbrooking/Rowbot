@@ -45,31 +45,31 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
     public ChannelWriter<TOutput[]>? WriterOut { get; private set; }
     public Action<BlockSummary>? SummaryCallback { get; set; }
 
-    public Func<Task> PrepareTask()
+    public Func<CancellationTokenSource, Task> PrepareTask()
     {
         _exceptionCount = 0;
         
-        return async () =>
+        return async (cts) =>
         {
             var workers = new List<Task>();
             
             for (var i = 0; i < _blockOptions.WorkerCount; i++)
             {
-                workers.Add(RunTaskAsync());
+                workers.Add(RunTaskAsync(cts));
             }
 
             await Task.WhenAll(workers)
-                .ContinueWith((_) => WriterOut?.Complete())
+                .ContinueWith((_) => WriterOut?.Complete(), cts.Token)
                 .ConfigureAwait(false);
         };
     }
 
-    private async Task RunTaskAsync()
+    private async Task RunTaskAsync(CancellationTokenSource cts)
     {
         var logger = _loggerFactory.CreateLogger<TransformBlock<TInput, TOutput>>();
         var blockSummary = BlockSummaryFactory.Create<TransformBlock<TInput, TOutput>>();
 
-        await foreach (var item in Reader.ReadAllAsync().ConfigureAwait(false))
+        await foreach (var item in Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
         {
             try
             {
@@ -82,7 +82,7 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
                             
                 if (WriterOut != null)
                 {
-                    await WriterOut.WriteAsync(result).ConfigureAwait(false);
+                    await WriterOut.WriteAsync(result, cts.Token).ConfigureAwait(false);
 
                     blockSummary.TotalBatches++;
                     blockSummary.RowsTransformed += result.Count();
@@ -95,7 +95,8 @@ public class TransformBlock<TInput, TOutput> : IBlockTarget<TInput>, IBlockSourc
                 if (_exceptionCount++ >= _blockOptions.MaxExceptions)
                 {
                     logger.LogError("Max exceptions reached, exiting worker");
-                    return;
+                    cts.Cancel();
+                    break;
                 }
             }
         }

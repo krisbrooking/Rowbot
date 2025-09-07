@@ -7,6 +7,7 @@ using System.Reflection;
 using Rowbot.Common.Extensions;
 using Rowbot.Pipelines.Runner.DependencyResolution;
 using Rowbot.Pipelines.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Rowbot;
 
@@ -26,6 +27,8 @@ public sealed class Pipeline
 
     public async Task<PipelineSummary> InvokeAsync()
     {
+        var logger = _context.LoggerFactory.CreateLogger<Pipeline>();
+
         var blockSummaries = new ConcurrentBag<BlockSummary>();
         Action<BlockSummary> summaryCallback = (summary) => blockSummaries.Add(summary);
 
@@ -39,11 +42,23 @@ public sealed class Pipeline
         var watch = new Stopwatch();
         watch.Start();
 
-        var prePipelineTaskSummaries = await ExecuteTasksAsync(_context.PrePipelineTasks).ConfigureAwait(false);
+        var prePipelineTaskSummaries = new List<BlockSummary>();
+        var postPipelineTaskSummaries = new List<BlockSummary>();
+        try
+        {
+            using var cts = new CancellationTokenSource();
 
-        await Task.WhenAll(pipelineTasks.Select(x => x())).ConfigureAwait(false);
-        
-        var postPipelineTaskSummaries = await ExecuteTasksAsync(_context.PostPipelineTasks).ConfigureAwait(false);
+            prePipelineTaskSummaries = await ExecuteTasksAsync(_context.PrePipelineTasks).ConfigureAwait(false);
+
+            await Task.WhenAll(pipelineTasks.Select(x => x(cts))).ConfigureAwait(false);
+
+            postPipelineTaskSummaries = await ExecuteTasksAsync(_context.PostPipelineTasks).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Pipeline {Container}:{Name} execution failed", Container ?? "N/A", Name ?? "N/A");
+        }
+
 
         watch.Stop();
 
@@ -64,14 +79,14 @@ public sealed class Pipeline
         return summaries;
     }
     
-    internal static IReadOnlyList<Func<Task>> LinkBlocks(Queue<IBlock> blockQueue)
+    internal static IReadOnlyList<Func<CancellationTokenSource, Task>> LinkBlocks(Queue<IBlock> blockQueue)
     {
         if (blockQueue.Count < 2)
         {
             throw new BlockBuilderException($"Too few blocks");
         }
 
-        List<Func<Task>> pipelineTasks = [];
+        List<Func<CancellationTokenSource, Task>> pipelineTasks = [];
 
         var queueCount = blockQueue.Count;
 

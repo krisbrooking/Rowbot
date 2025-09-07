@@ -17,9 +17,7 @@ namespace Rowbot.IntegrationTests.Tests
         {
             await SqliteTest.WriteRowsAsync(SourceCustomer.GetValidEntities(10));
 
-            var result = await SqliteTest
-                .BuildRunner(typeof(CustomerPipeline))
-                .RunAsync();
+            var result = await PipelineTest.RunPipelinesAsync<CustomerPipeline>().RunAsync();
 
             var rows = await SqliteTest.ReadRowsAsync<Customer>();
 
@@ -37,7 +35,10 @@ namespace Rowbot.IntegrationTests.Tests
                             SqliteTest.ConnectionString,
                             "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
                         options: new ExtractOptions(batchSize: 10))
-                    .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                    .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                    .Apply<Customer>(mapper => mapper
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).Include(x => x.Id), x => x.KeyHash)
+                        .Transform.ToHashCode(hash => hash.WithSeed(1).All(), x => x.ChangeHash))
                     .Load(builder => builder
                         .ToSqlite(SqliteTest.ConnectionString)
                         .WithTask(async (connector, logger) =>

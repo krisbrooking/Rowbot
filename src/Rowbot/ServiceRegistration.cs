@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Rowbot.Common.Services;
 using Rowbot.Connectors.Common.Database;
@@ -7,15 +6,17 @@ using Rowbot.Connectors.Common.Find;
 using Rowbot.Connectors.Common.Synchronisation;
 using Rowbot.Connectors.List;
 using Rowbot.Entities;
-using Rowbot.Extractors.CursorPagination;
 using Rowbot.Extractors;
+using Rowbot.Extractors.CursorPagination;
 using Rowbot.Extractors.OffsetPagination;
 using Rowbot.Loaders;
 using Rowbot.Loaders.SlowlyChangingDimension;
 using Rowbot.Loaders.SnapshotFact;
 using Rowbot.Loaders.TransactionFact;
+using Rowbot.Null;
 using Rowbot.Pipelines.Builder;
 using Rowbot.Pipelines.Summary;
+using System.Reflection;
 
 namespace Rowbot;
 
@@ -62,6 +63,7 @@ public static class ServiceRegistrationExtensions
         services.RegisterServices();
 
         services.AddListConnector();
+        services.AddNullConnector();
 
         services.AddExtractors();
         services.AddTransformers();
@@ -119,7 +121,14 @@ public static class ServiceRegistrationExtensions
 
         return services;
     }
-    
+
+    private static IServiceCollection AddNullConnector(this IServiceCollection services)
+    {
+        services.TryAddTransient(typeof(NullWriteConnector<>));
+
+        return services;
+    }
+
     private static IServiceCollection AddExtractors(this IServiceCollection services)
     {
         services.TryAddTransient(typeof(DefaultExtractor<,>));
@@ -135,6 +144,8 @@ public static class ServiceRegistrationExtensions
         services.TryAddTransient(typeof(Transformer<,>));
         services.TryAddTransient(typeof(AsyncTransformer<,>));
         services.TryAddTransient(typeof(MapperTransformer<,>));
+        services.TryAddTransient(typeof(TestTransformer<,,>));
+        services.TryAddTransient(typeof(EnsureTransformer<,>));
 
         return services;
     }

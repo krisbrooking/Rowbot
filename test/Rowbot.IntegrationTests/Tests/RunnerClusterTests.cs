@@ -24,27 +24,26 @@ namespace Rowbot.IntegrationTests.Tests
 
             var watch = new Stopwatch();
             watch.Start();
-            await SqliteTest
-                .BuildRunner(pipelineContainers)
-                .RunAsync();
+            await PipelineTest.RunPipelinesAsync(pipelineContainers).RunAsync();
             watch.Stop();
 
             Assert.True(watch.ElapsedMilliseconds < pipelineContainers.Length * DELAY);
-        }        
+        }
 
         private static Pipeline GetPipeline(IPipelineBuilder pipelineBuilder) =>
             pipelineBuilder
                 .Extract<SourceCustomer>(builder => builder
-                    .FromSqlite(
-                        SqliteTest.ConnectionString,
-                        "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
+                    .FromSqlite(SqliteTest.ConnectionString, "SELECT [CustomerId], [CustomerName], [Inactive] FROM [SourceCustomer]"),
                     options: new ExtractOptions(batchSize: 10))
                 .Transform(async source =>
                 {
                     await Task.Delay(DELAY);
                     return source;
                 })
-                .Apply<Customer>(mapper => Customer.ConfigureMapper(mapper))
+                .Transform(source => source.Select(x => new Customer(x.CustomerId, x.CustomerName, x.Inactive, x.Source)))
+                .Apply<Customer>(mapper => mapper
+                    .Transform.ToHashCode(hash => hash.WithSeed(1).Include(x => x.Id), x => x.KeyHash)
+                    .Transform.ToHashCode(hash => hash.WithSeed(1).All(), x => x.ChangeHash))
                 .Load(builder => builder
                     .ToSqlite(SqliteTest.ConnectionString));
 

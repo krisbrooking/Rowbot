@@ -1,10 +1,9 @@
-using System.Reflection;
-using System.Transactions;
 using Microsoft.Extensions.Logging;
 using Rowbot.Common.Services;
-using Rowbot.Entities.DataAnnotations;
 using Rowbot.Entities;
 using Rowbot.Loaders.Framework;
+using System.Reflection;
+using System.Transactions;
 
 namespace Rowbot.Loaders.SlowlyChangingDimension;
 
@@ -35,11 +34,16 @@ public sealed class SlowlyChangingDimensionLoader<TInput>(
     public SlowlyChangingDimensionLoaderOptions<TInput> Options { get; set; } = new();
     public IWriteConnector<TInput>? Connector { get; set; }
 
-    public async Task<LoadResult<TInput>> LoadAsync(TInput[] data)
+    public async Task<LoadResult<TInput>> LoadAsync(TInput[] data, CancellationToken cancellationToken = default)
     {
         if (Connector is null)
         {
             throw new InvalidOperationException("Write connector is not configured");
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new LoadResult<TInput>(Enumerable.Empty<TInput>(), Enumerable.Empty<RowUpdate<TInput>>());
         }
 
         var keyField = _entity.Descriptor.Value.KeyFields.Single();

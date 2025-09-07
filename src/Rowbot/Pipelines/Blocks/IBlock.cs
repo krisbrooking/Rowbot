@@ -4,6 +4,6 @@ namespace Rowbot.Pipelines.Blocks;
 
 public interface IBlock
 {
-    Func<Task> PrepareTask();
+    Func<CancellationTokenSource, Task> PrepareTask();
     Action<BlockSummary>? SummaryCallback { get; set; }
 }

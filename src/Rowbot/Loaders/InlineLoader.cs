@@ -8,7 +8,7 @@ public sealed class InlineLoader<TInput> : ILoader<TInput>
     public Func<TInput[], IWriteConnector<TInput>, Task<LoadResult<TInput>>> LoaderDelegate { get; set; }
         = (data, connector) => Task.FromResult(new LoadResult<TInput>([], []));
 
-    public async Task<LoadResult<TInput>> LoadAsync(TInput[] data)
+    public async Task<LoadResult<TInput>> LoadAsync(TInput[] data, CancellationToken cancellationToken = default)
     {
         if (Connector is null)
         {

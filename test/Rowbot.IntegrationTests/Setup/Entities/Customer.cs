@@ -47,6 +47,19 @@ namespace Rowbot.IntegrationTests.Setup.Entities
     [Table(nameof(Customer))]
     public sealed class Customer : Dimension
     {
+        public Customer()
+        {
+        }
+
+        public Customer(int id, string? name, bool inactive, int source)
+        {
+            Id = id;
+            IntegrationId = id;
+            Name = name;
+            Inactive = inactive;
+            Source = source;
+        }
+
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int CustomerKey { get; set; }
